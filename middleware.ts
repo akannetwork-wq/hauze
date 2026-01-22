@@ -3,18 +3,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 export const config = {
-    matcher: ['/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)'],
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - api (API routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - images/ (local images)
+         */
+        '/((?!api|_next/static|_next/image|favicon.ico|images|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)).*)',
+    ],
 };
 
 export default async function middleware(req: NextRequest) {
-    // 1. Refresh Session & Get User
-    const { response, user } = await updateSession(req);
-
     const url = req.nextUrl;
     const host = req.headers.get('host')!;
-    const hostname = host.split(':')[0]; // Portu ayıklıyoruz (localhost:3000 -> localhost)
+    const hostname = host.split(':')[0];
 
-    // TODO: Bu değeri .env dosyasından çekmek daha sağlıklı olur
+    // Default response
+    let response = NextResponse.next({
+        request: {
+            headers: req.headers,
+        },
+    });
+
+    // We only need a full Supabase session refresh for admin areas or logins
+    const isAdminPath = url.pathname.startsWith('/admin') ||
+        url.pathname.startsWith('/terminal') ||
+        url.pathname.startsWith('/login');
+
+    let user = null;
+
+    if (isAdminPath) {
+        const sessionUpdate = await updateSession(req);
+        response = sessionUpdate.response;
+        user = sessionUpdate.user;
+    }
+
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost';
     const isRootDomain = hostname === rootDomain;
 
