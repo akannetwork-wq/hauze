@@ -3,7 +3,12 @@ import AttendanceFetcher from './attendance-fetcher';
 import MonthSelector from './month-selector';
 import Link from 'next/link';
 
+import { headers } from 'next/headers';
+
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+    // Explicitly opt into dynamic rendering to allow new Date() usage in Next.js 16
+    await headers();
+
     const sParams = await searchParams;
     const currentMonth = sParams.month || new Date().toISOString().substring(0, 7);
 

@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { getEmployees, getPersonnelTasks, getAttendance, getSalaryStats } from '@/app/actions/personnel';
+import { headers } from 'next/headers';
 
 export default async function PersonnelDashboardContent() {
+    // Explicitly opt into dynamic rendering to allow new Date() usage in Next.js 16
+    await headers();
+
     const [employees, tasks, attendance, salaryStats] = await Promise.all([
         getEmployees(),
         getPersonnelTasks(),
