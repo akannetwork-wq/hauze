@@ -8,21 +8,32 @@ export const config = {
 
 export default async function middleware(req: NextRequest) {
     // 1. Refresh Session & Get User
-    // We use 'updateSession' pattern from Supabase SSR docs
     const { response, user } = await updateSession(req);
 
     const url = req.nextUrl;
-    const hostname = req.headers.get('host')!;
+    const host = req.headers.get('host')!;
+    const hostname = host.split(':')[0]; // Portu ayıklıyoruz (localhost:3000 -> localhost)
 
-    // TODO: Real tenant resolution via API/Redis
-    // For dev: map localhost:3000 to a default tenant
-    // For dev: map localhost:3000 to a default tenant
-    // Also allow path-based access on localhost for convenience
+    // TODO: Bu değeri .env dosyasından çekmek daha sağlıklı olur
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost';
+    const isRootDomain = hostname === rootDomain;
+
     const isLocalhost = hostname.includes('localhost');
-    const isTerminal = hostname.startsWith('terminal') || (isLocalhost && url.pathname.startsWith('/terminal'));
-    // If localhost/admin or localhost/login, treat as App (Tenant Admin)
-    // Note: This might conflict if we have a public page called "admin", but unlikely.
-    const isApp = hostname.startsWith('app') || (isLocalhost && (url.pathname.startsWith('/admin') || url.pathname.startsWith('/login')));
+
+    // Terminal Logic (Super Admin)
+    const isTerminal = hostname.startsWith('terminal') || url.pathname.startsWith('/terminal');
+
+    // App Logic (Tenant Admin)
+    const isApp = hostname.startsWith('app') || url.pathname.startsWith('/admin') || url.pathname.startsWith('/login');
+
+    // ---------------------------------------------------------
+    // Root Domain Logic (Main Site)
+    // ---------------------------------------------------------
+    if (isRootDomain && !isTerminal && !isApp) {
+        // Ana domaindeysek ve terminal/admin gitmiyorsak, isteği serbest bırakıyoruz.
+        // Bu sayede app/(main) klasöründeki rotalar direkt çalışacak.
+        return response;
+    }
 
     // ---------------------------------------------------------
     // Terminal Logic (Super Admin)
