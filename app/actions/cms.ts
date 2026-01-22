@@ -4,36 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getCurrentContext } from './tenant-context';
+import { Section, SectionType } from '@/types';
+import { getAuthenticatedClient } from './auth-helper';
+// import { v4 as uuidv4 } from 'uuid'; // Removed to use native crypto.randomUUID()
 
-// Utility to enforce tenant context
-async function getAuthenticatedClient() {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) {
-        throw new Error('Unauthorized');
-    }
-
-    // We also need to set the Session Variable for RLS!
-    // However, Supabase JS Client doesn't easily support `SET app.current_tenant_id` per query via `rpc`.
-    // Strategy: We rely on the `tenant_users` check in the Policy OR we assume the middleware verified hostname.
-    // BUT RLS policies look for `current_setting('app.current_tenant_id')`.
-
-    // PROBLEM: Supabase JS Client over HTTP uses connection pooling, we can't reliably SET LOCAL config.
-    // SOLUTION: We must use the `tenant_id` in the WHERE clause explicitly for now, 
-    // OR call a specific RPC that sets it.
-
-    // Robust Solution:
-    // 1. Get Tenant ID from Hostname (Context)
-    // 2. Pass it explicitly to every query.
-    // 3. RLS Policy should ALSO allow `tenant_id = (select tenant_id from tenant_users where user_id = auth.uid())`
-
-    // Let's use the Context Helper
-    const context = await getCurrentContext();
-    if (!context) throw new Error('No tenant context');
-
-    return { supabase, user, tenant: context.tenant };
-}
 
 export async function getPages() {
     const { supabase, tenant } = await getAuthenticatedClient();
@@ -269,4 +243,143 @@ export async function getUniquePath(basePath: string, excludeId?: string) {
     }
 
     return currentPath;
+}
+
+export async function addSection(pageId: string, type: SectionType) {
+    const { supabase, tenant } = await getAuthenticatedClient();
+
+    // 1. Get current sections
+    const { data: page, error: fetchError } = await supabase
+        .from('pages')
+        .select('sections')
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id)
+        .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentSections = (page?.sections as Section[]) || [];
+
+    // 2. Create new section
+    const newSection: Section = {
+        id: crypto.randomUUID(),
+        type,
+        content: {},
+        styles: {
+            containerWidth: 'boxed',
+            paddingTop: 'py-16',
+            paddingBottom: 'py-16'
+        }
+    };
+
+    // 3. Append and update
+    const updatedSections = [...currentSections, newSection];
+
+    const { error: updateError } = await supabase
+        .from('pages')
+        .update({ sections: updatedSections, updated_at: new Date().toISOString() })
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id);
+
+    if (updateError) throw updateError;
+
+    revalidatePath(`/admin/pages/${pageId}`);
+    return { success: true, sectionId: newSection.id };
+}
+
+export async function reorderSections(pageId: string, sectionIds: string[]) {
+    const { supabase, tenant } = await getAuthenticatedClient();
+
+    const { data: page, error: fetchError } = await supabase
+        .from('pages')
+        .select('sections')
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id)
+        .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentSections = (page?.sections as Section[]) || [];
+
+    // Create map for easy access
+    const sectionMap = new Map(currentSections.map(s => [s.id, s]));
+
+    // Reorder based on provided IDs
+    const updatedSections = sectionIds
+        .map(id => sectionMap.get(id))
+        .filter((s): s is Section => !!s);
+
+    const { error: updateError } = await supabase
+        .from('pages')
+        .update({ sections: updatedSections, updated_at: new Date().toISOString() })
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id);
+
+    if (updateError) throw updateError;
+
+    revalidatePath(`/admin/pages/${pageId}`);
+    return { success: true };
+}
+
+export async function deleteSection(pageId: string, sectionId: string) {
+    const { supabase, tenant } = await getAuthenticatedClient();
+
+    const { data: page, error: fetchError } = await supabase
+        .from('pages')
+        .select('sections')
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id)
+        .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentSections = (page?.sections as Section[]) || [];
+    const updatedSections = currentSections.filter(s => s.id !== sectionId);
+
+    const { error: updateError } = await supabase
+        .from('pages')
+        .update({ sections: updatedSections, updated_at: new Date().toISOString() })
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id);
+
+    if (updateError) throw updateError;
+
+    revalidatePath(`/admin/pages/${pageId}`);
+    return { success: true };
+}
+
+export async function updateSectionContent(pageId: string, sectionId: string, updates: Partial<Section>) {
+    const { supabase, tenant } = await getAuthenticatedClient();
+
+    const { data: page, error: fetchError } = await supabase
+        .from('pages')
+        .select('sections')
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id)
+        .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentSections = (page?.sections as Section[]) || [];
+    const updatedSections = currentSections.map(s => {
+        if (s.id === sectionId) {
+            return {
+                ...s,
+                content: updates.content ? { ...s.content, ...updates.content } : s.content,
+                styles: updates.styles ? { ...s.styles, ...updates.styles } : s.styles
+            };
+        }
+        return s;
+    });
+
+    const { error: updateError } = await supabase
+        .from('pages')
+        .update({ sections: updatedSections, updated_at: new Date().toISOString() })
+        .eq('id', pageId)
+        .eq('tenant_id', tenant.id);
+
+    if (updateError) throw updateError;
+
+    revalidatePath(`/admin/pages/${pageId}`);
+    return { success: true };
 }

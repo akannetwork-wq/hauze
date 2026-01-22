@@ -49,11 +49,11 @@ export default function AttendanceGridClient({ employees, initialAttendance, mon
     async function handleQuickUpdate(employeeId: string, day: number, currentStatus: string | null) {
         // Cycle: Empty -> Present -> Absent -> Leave -> Half-Day -> Double -> Empty...
         const nextStatusMap: Record<string, string | null> = {
-            'present': 'absent',
+            'present': 'double',
+            'double': 'absent',
             'absent': 'leave',
             'leave': 'half-day',
-            'half-day': 'double',
-            'double': null // Unmark
+            'half-day': null
         };
         const nextStatus = currentStatus ? nextStatusMap[currentStatus] : 'present';
         const dateStr = `${month}-${String(day).padStart(2, '0')}`;
@@ -117,24 +117,18 @@ export default function AttendanceGridClient({ employees, initialAttendance, mon
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm w-fit">
+            <div className="flex items-center gap-2 bg-white p-2 rounded-full border border-gray-100 shadow-sm w-fit">
                 <button
-                    onClick={() => setWorkerTypeFilter('all')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${workerTypeFilter === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                    onClick={() => setWorkerTypeFilter('daily')}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${workerTypeFilter === 'daily' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                 >
-                    TÜMÜ
+                    GÜNLÜK
                 </button>
                 <button
                     onClick={() => setWorkerTypeFilter('monthly')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${workerTypeFilter === 'monthly' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${workerTypeFilter === 'monthly' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                 >
                     MAAŞLI
-                </button>
-                <button
-                    onClick={() => setWorkerTypeFilter('daily')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${workerTypeFilter === 'daily' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
-                >
-                    GÜNLÜK
                 </button>
             </div>
 
@@ -199,10 +193,10 @@ export default function AttendanceGridClient({ employees, initialAttendance, mon
             {/* Legend */}
             <div className="flex flex-wrap gap-6 text-[10px] font-black uppercase tracking-widest bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 text-emerald-600"><div className="w-5 h-5 bg-emerald-500 rounded-lg shadow-sm"></div> GELDI (P)</div>
+                <div className="flex items-center gap-2 text-violet-600"><div className="w-5 h-5 bg-violet-600 rounded-lg shadow-sm"></div> FAZLA MESAİ (2X)</div>
                 <div className="flex items-center gap-2 text-rose-600"><div className="w-5 h-5 bg-rose-500 rounded-lg shadow-sm"></div> GELMEDI (X)</div>
                 <div className="flex items-center gap-2 text-indigo-600"><div className="w-5 h-5 bg-indigo-500 rounded-lg shadow-sm"></div> İZİNLİ (İ)</div>
                 <div className="flex items-center gap-2 text-amber-600"><div className="w-5 h-5 bg-amber-500 rounded-lg shadow-sm"></div> YARIM GÜN (½)</div>
-                <div className="flex items-center gap-2 text-violet-600"><div className="w-5 h-5 bg-violet-600 rounded-lg shadow-sm"></div> FAZLA MESAİ (2X)</div>
                 <div className="ml-auto text-gray-400 normal-case font-medium italic">Tıklayarak durumu değiştirebilir veya silebilirsiniz.</div>
             </div>
         </div>

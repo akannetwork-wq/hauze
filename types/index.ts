@@ -40,12 +40,31 @@ export interface Section {
     id: string;
     type: SectionType;
     content: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    styles?: {
+        paddingTop?: string;
+        paddingBottom?: string;
+        backgroundColor?: string;
+        containerWidth?: 'full' | 'boxed';
+        [key: string]: any;
+    };
 }
 
 /**
  * Available section types
  */
-export type SectionType = 'hero' | 'text' | 'cta' | 'product-grid' | 'features' | 'gallery' | 'faq' | 'video' | 'html';
+export type SectionType =
+    | 'hero'
+    | 'text'
+    | 'cta'
+    | 'product-grid'
+    | 'features'
+    | 'gallery'
+    | 'faq'
+    | 'video'
+    | 'html'
+    | 'testimonials'
+    | 'contact'
+    | 'stats';
 
 /**
  * Localized content for i18n support
@@ -209,6 +228,7 @@ export interface Product {
 
     // Virtual fields (joined)
     price?: Price;
+    prices?: Price[]; // Added for list views where all prices might be needed
     inventory?: InventoryItem[];
     category_ids?: string[]; // Multiple categories support
     variants?: ProductVariant[];

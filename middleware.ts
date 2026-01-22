@@ -27,7 +27,7 @@ export default async function middleware(req: NextRequest) {
     });
 
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost';
-    const isRootDomain = hostname === rootDomain;
+    const isRootDomain = hostname === rootDomain || hostname === `www.${rootDomain}`;
 
     const isLocalhost = hostname.includes('localhost');
 

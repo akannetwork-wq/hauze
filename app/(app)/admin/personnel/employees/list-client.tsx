@@ -8,11 +8,38 @@ interface Props {
     employees: any[];
 }
 
-export default function EmployeeListClient({ employees }: Props) {
+export default function EmployeeListClient({ employees: initialEmployees }: Props) {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const [employees, setEmployees] = useState(initialEmployees);
     const [search, setSearch] = useState('');
     const currentType = searchParams.get('type') || 'all';
+
+    const [hasMore, setHasMore] = useState(initialEmployees.length === 50);
+    const [page, setPage] = useState(1);
+    const [isMoreLoading, setIsMoreLoading] = useState(false);
+
+    async function handleLoadMore() {
+        if (isMoreLoading) return;
+        setIsMoreLoading(true);
+        const nextOffset = page * 50;
+        try {
+            const { getEmployees } = await import('@/app/actions/personnel');
+            const nextBatch = await getEmployees(50, nextOffset);
+
+            if (nextBatch.length > 0) {
+                setEmployees(prev => [...prev, ...nextBatch]);
+                setPage(prev => prev + 1);
+                setHasMore(nextBatch.length === 50);
+            } else {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error('Error loading more employees:', error);
+        } finally {
+            setIsMoreLoading(false);
+        }
+    }
 
     const setType = (type: string) => {
         const params = new URLSearchParams(searchParams);
@@ -108,8 +135,9 @@ export default function EmployeeListClient({ employees }: Props) {
                                     </td>
                                     <td className="px-6 py-5 text-right">
                                         <Link
-                                            href={`/admin/personnel/employees/${emp.id}`}
-                                            className="text-gray-300 hover:text-indigo-600 transition-colors p-2"
+                                            href={`?drawer=edit-employee&id=${emp.id}`}
+                                            scroll={false}
+                                            className="text-gray-300 hover:text-indigo-600 transition-colors p-2 font-black text-[10px] uppercase tracking-widest"
                                         >
                                             Düzenle →
                                         </Link>
@@ -126,6 +154,18 @@ export default function EmployeeListClient({ employees }: Props) {
                         )}
                     </tbody>
                 </table>
+
+                {hasMore && (
+                    <div className="p-8 border-t border-gray-50 flex justify-center bg-gray-50/30">
+                        <button
+                            onClick={handleLoadMore}
+                            disabled={isMoreLoading}
+                            className="bg-white border border-gray-200 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                        >
+                            {isMoreLoading ? 'Yükleniyor...' : 'Daha Fazla Kayıt Yükle'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

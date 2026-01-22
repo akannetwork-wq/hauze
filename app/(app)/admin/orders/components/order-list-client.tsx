@@ -90,7 +90,7 @@ export default function OrderListClient({ initialOrders }: Props) {
                 <input
                     type="text"
                     placeholder="Sipariş no veya isim ile ara..."
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none shadow-sm"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-sm text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none shadow-sm"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -99,12 +99,12 @@ export default function OrderListClient({ initialOrders }: Props) {
 
             <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
 
-                <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto w-full md:w-auto no-scrollbar">
+                <div className="flex items-center gap-2 bg-white p-1 rounded-sm border border-gray-100 shadow-sm overflow-x-auto w-full md:w-auto no-scrollbar">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${activeTab === tab.id
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xs text-xs font-black transition-all whitespace-nowrap ${activeTab === tab.id
                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
                                 : 'text-gray-500 hover:bg-gray-50'
                                 }`}
@@ -118,7 +118,7 @@ export default function OrderListClient({ initialOrders }: Props) {
                 {/* Sorting */}
                 <div className="flex justify-end gap-2">
                     <select
-                        className="text-xs font-bold bg-white border border-gray-100 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                        className="text-xs font-bold bg-white border border-gray-100 rounded-sm px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as any)}
                     >
@@ -128,7 +128,7 @@ export default function OrderListClient({ initialOrders }: Props) {
                     </select>
                     <button
                         onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                        className="p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+                        className="p-2 bg-white border border-gray-100 rounded-sm hover:bg-gray-50 transition-all shadow-sm"
                         title={sortOrder === 'asc' ? 'Artan' : 'Azalan'}
                     >
                         {sortOrder === 'asc' ? '🔼' : '🔽'}
@@ -140,7 +140,7 @@ export default function OrderListClient({ initialOrders }: Props) {
 
 
             {/* Orders Table */}
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
+            <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>

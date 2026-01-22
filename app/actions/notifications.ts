@@ -2,18 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentContext } from './tenant-context';
+import { getAuthenticatedClient } from './auth-helper';
 
-async function getAuthenticatedClient() {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) throw new Error('Unauthorized');
-
-    const context = await getCurrentContext();
-    if (!context) throw new Error('No tenant context');
-
-    return { supabase, user, tenant: context.tenant };
-}
 
 export type NotificationType = 'missing_price' | 'unprofitable_price' | 'low_stock' | 'delayed_order';
 

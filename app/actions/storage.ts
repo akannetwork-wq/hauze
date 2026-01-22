@@ -1,9 +1,8 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
-import { getCurrentContext } from './tenant-context';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
+import { getAuthenticatedClient } from './auth-helper';
 
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -24,11 +23,8 @@ export async function uploadCoverImage(pageId: string, formData: FormData) {
             return { error: 'File too large. Max 5MB allowed.' };
         }
 
-        const context = await getCurrentContext();
-        if (!context) throw new Error('Unauthorized');
-
-        const supabase = await createClient();
-        const tenantId = context.tenant.id;
+        const { supabase, tenant } = await getAuthenticatedClient();
+        const tenantId = tenant.id;
 
         // Read file to buffer
         const arrayBuffer = await file.arrayBuffer();
@@ -107,11 +103,8 @@ export async function uploadProductImage(productId: string, formData: FormData, 
             return { error: 'File too large. Max 5MB allowed.' };
         }
 
-        const context = await getCurrentContext();
-        if (!context) throw new Error('Unauthorized');
-
-        const supabase = await createClient();
-        const tenantId = context.tenant.id;
+        const { supabase, tenant } = await getAuthenticatedClient();
+        const tenantId = tenant.id;
 
         // Read file to buffer
         const arrayBuffer = await file.arrayBuffer();
@@ -188,7 +181,7 @@ export async function uploadProductImage(productId: string, formData: FormData, 
 
 export async function deleteStorageObject(path: string) {
     try {
-        const supabase = await createClient();
+        const { supabase } = await getAuthenticatedClient();
         const { error } = await supabase.storage
             .from('cms')
             .remove([path]);
@@ -203,11 +196,8 @@ export async function deleteStorageObject(path: string) {
 
 export async function deletePageStorage(pageId: string) {
     try {
-        const context = await getCurrentContext();
-        if (!context) throw new Error('Unauthorized');
-
-        const supabase = await createClient();
-        const tenantId = context.tenant.id;
+        const { supabase, tenant } = await getAuthenticatedClient();
+        const tenantId = tenant.id;
         const folderPath = `${tenantId}/pages/${pageId}`;
 
         // List all files in the folder

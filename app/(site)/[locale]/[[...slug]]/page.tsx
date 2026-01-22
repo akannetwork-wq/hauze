@@ -3,7 +3,7 @@ import { getPageBySlug } from '@/app/actions/cms-public';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { CartProvider } from '@/components/commerce/cart-provider';
-import { ProductGrid } from '@/components/commerce/product-grid';
+import SectionRenderer from '@/components/site/sections';
 
 interface PageProps {
     params: Promise<{
@@ -38,10 +38,10 @@ async function UniversalPageContent({ params }: PageProps) {
     if (!result) {
         if (slugPath === 'home') {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 uppercase tracking-tighter">
                     <div className="text-center">
-                        <h1 className="text-4xl font-bold mb-4">Welcome to {hostname}</h1>
-                        <p>This site has not been set up yet. (No Homepage found)</p>
+                        <h1 className="text-4xl font-black mb-4">Welcome to {hostname}</h1>
+                        <p className="text-gray-400">This site has not been set up yet. (No Homepage found)</p>
                     </div>
                 </div>
             )
@@ -53,71 +53,30 @@ async function UniversalPageContent({ params }: PageProps) {
 
     return (
         <CartProvider>
-            <div>
+            <div className="min-h-screen flex flex-col">
                 {/* Header / Nav (Simplified) */}
-                <header className="p-6 border-b flex justify-between items-center bg-white sticky top-0 z-10 opacity-95">
-                    <div className="font-bold text-xl">{tenant.name}</div>
-                    <nav className="space-x-4 text-sm font-medium">
-                        <a href="/home" className="hover:text-indigo-600">Home</a>
+                <header className="p-6 border-b flex justify-between items-center bg-white sticky top-0 z-10 shadow-sm">
+                    <div className="font-black text-xl tracking-tighter uppercase">{tenant.name}</div>
+                    <nav className="space-x-4 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        <a href="/home" className="hover:text-indigo-600 transition-colors">Home</a>
                     </nav>
                 </header>
 
-                {/* Render Sections */}
-                {page.sections?.map((section: any) => (
-                    <SectionRenderer key={section.id} section={section} tenantId={tenant.id} />
-                ))}
+                <main className="flex-1">
+                    {/* Render Modular Sections */}
+                    {page.sections?.map((section: any) => (
+                        <SectionRenderer key={section.id} section={section} />
+                    ))}
 
-                {(!page.sections || page.sections.length === 0) && (
-                    <div className="max-w-4xl mx-auto py-12 px-6">
-                        <h1 className="text-4xl font-bold mb-6">{page.title}</h1>
-                        <p>This page has no content blocks.</p>
-                    </div>
-                )}
+                    {/* Fallback for empty pages */}
+                    {(!page.sections || page.sections.length === 0) && (
+                        <div className="max-w-4xl mx-auto py-24 px-6 text-center">
+                            <h1 className="text-5xl font-black mb-6 tracking-tighter uppercase">{page.title}</h1>
+                            <p className="text-gray-400 text-lg">This page is currently being built by our team.</p>
+                        </div>
+                    )}
+                </main>
             </div>
         </CartProvider>
     );
-}
-
-function SectionRenderer({ section, tenantId }: { section: any, tenantId: string }) {
-    const { type, content } = section;
-
-    switch (type) {
-        case 'product-grid':
-            return (
-                <section className="max-w-7xl mx-auto py-12 px-6">
-                    <h2 className="text-3xl font-bold mb-8 text-center">{content.headline || 'Our Products'}</h2>
-                    <ProductGrid tenantId={tenantId} />
-                </section>
-            );
-        case 'hero':
-            return (
-                <section className="bg-gray-900 text-white py-20 px-6 text-center">
-                    <h1 className="text-5xl font-bold mb-4">{content.headline}</h1>
-                    <p className="text-xl text-gray-300 max-w-2xl mx-auto">{content.subheadline}</p>
-                </section>
-            );
-        case 'text':
-            return (
-                <section className="max-w-3xl mx-auto py-12 px-6">
-                    <div className="prose lg:prose-xl">
-                        {content.text}
-                    </div>
-                </section>
-            );
-        case 'features':
-            return (
-                <section className="py-12 bg-gray-50 px-6">
-                    <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-8">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-white p-6 rounded shadow-sm">
-                                <h3 className="font-bold mb-2">Feature {i}</h3>
-                                <p className="text-gray-500">Placeholder feature text.</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            );
-        default:
-            return <div className="py-4 text-center text-gray-400">Unknown Section Type: {type}</div>
-    }
 }

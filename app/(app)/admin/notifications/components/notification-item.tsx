@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react';
 
 interface Props {
@@ -27,7 +28,7 @@ export default function NotificationItem({ type, title, description, link, sever
     const icon = iconConfig[type] || '🔔';
 
     return (
-        <a
+        <Link
             href={link}
             className={`group block p-6 rounded-[2rem] border transition-all hover:scale-[1.01] hover:shadow-xl active:scale-100 ${severityStyles}`}
         >
@@ -48,6 +49,6 @@ export default function NotificationItem({ type, title, description, link, sever
                     </p>
                 </div>
             </div>
-        </a>
+        </Link>
     );
 }

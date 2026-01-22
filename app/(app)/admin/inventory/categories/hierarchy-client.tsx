@@ -163,6 +163,11 @@ function SortableCategoryLevel({
 
 export default function CategoryHierarchyClient({ categories: initialCategories }: Props) {
     const [categories, setCategories] = useState(initialCategories);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Sync with server props
     useEffect(() => {
@@ -195,12 +200,17 @@ export default function CategoryHierarchyClient({ categories: initialCategories 
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <SortableCategoryLevel
-                categories={categories}
-                parentId={null}
-                depth={0}
-                onOrderChange={handleOrderChange}
-            />
+            {mounted && (
+                <SortableCategoryLevel
+                    categories={categories}
+                    parentId={null}
+                    depth={0}
+                    onOrderChange={handleOrderChange}
+                />
+            )}
+            {!mounted && (
+                <div className="p-8 text-center text-gray-400">Yükleniyor...</div>
+            )}
         </div>
     );
 }

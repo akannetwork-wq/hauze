@@ -533,6 +533,7 @@ export default function ProductEditorClient({ initialData, categories, initialPr
                                                 </div>
                                             </div>
                                         </div>
+
                                         <div className="flex gap-4 items-center">
                                             <div className="flex items-center bg-gray-50 rounded-lg px-2 py-1 border border-gray-100">
                                                 <span className="text-[10px] text-gray-400 font-bold mr-2 uppercase">Fiyat</span>
@@ -573,6 +574,8 @@ export default function ProductEditorClient({ initialData, categories, initialPr
                                                 ✕
                                             </button>
                                         </div>
+
+
                                     </div>
                                 ))}
                             </div>
@@ -610,6 +613,49 @@ export default function ProductEditorClient({ initialData, categories, initialPr
 
                 {/* Sidebar */}
                 <div className="space-y-6">
+
+                    {/* Pricing */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs uppercase text-gray-400 font-bold mb-1.5">Satış Fiyatı (TRY)</label>
+                                <input
+                                    type="number"
+                                    value={price || ''}
+                                    onChange={e => setPrice(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all font-bold"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs uppercase text-gray-400 font-bold mb-1.5">Alış Fiyatı (TRY)</label>
+                                <input
+                                    type="number"
+                                    value={purchasePrice || ''}
+                                    onChange={e => setPurchasePrice(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+
+                        {product.type === 'product' && (
+                            <div>
+                                <label className="block text-xs uppercase text-gray-400 font-bold mb-1.5">
+                                    {product.variants && product.variants.length > 0 ? 'Genel Stok (Varyasyon Toplamı)' : 'Stok Miktarı'}
+                                </label>
+                                <input
+                                    type="number"
+                                    value={stock || ''}
+                                    onChange={e => setStock(e.target.value)}
+                                    disabled={product.variants && product.variants.length > 0}
+                                    className={`w-full px-4 py-2 border rounded-lg outline-none font-bold text-lg ${product.variants && product.variants.length > 0 ? 'bg-gray-50 border-gray-100 text-indigo-600 cursor-not-allowed' : 'border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                                    placeholder="0"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
                         <div>
                             <select
@@ -773,46 +819,6 @@ export default function ProductEditorClient({ initialData, categories, initialPr
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs uppercase text-gray-400 font-bold mb-1.5">Satış Fiyatı (TRY)</label>
-                                <input
-                                    type="number"
-                                    value={price || ''}
-                                    onChange={e => setPrice(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all font-bold"
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs uppercase text-gray-400 font-bold mb-1.5">Alış Fiyatı (TRY)</label>
-                                <input
-                                    type="number"
-                                    value={purchasePrice || ''}
-                                    onChange={e => setPurchasePrice(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        {product.type === 'product' && (
-                            <div>
-                                <label className="block text-xs uppercase text-gray-400 font-bold mb-1.5">
-                                    {product.variants && product.variants.length > 0 ? 'Genel Stok (Varyasyon Toplamı)' : 'Stok Miktarı'}
-                                </label>
-                                <input
-                                    type="number"
-                                    value={stock || ''}
-                                    onChange={e => setStock(e.target.value)}
-                                    disabled={product.variants && product.variants.length > 0}
-                                    className={`w-full px-4 py-2 border rounded-lg outline-none font-bold text-lg ${product.variants && product.variants.length > 0 ? 'bg-gray-50 border-gray-100 text-indigo-600 cursor-not-allowed' : 'border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                                    placeholder="0"
-                                />
-                            </div>
-                        )}
-                    </div>
 
                     <button
                         onClick={handleSave}

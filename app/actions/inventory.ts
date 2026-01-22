@@ -5,18 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentContext } from './tenant-context';
 import { Product, ProductCategory } from '@/types';
 import { generateSlug } from '@/lib/slug';
+import { getAuthenticatedClient } from './auth-helper';
 
-async function getAuthenticatedClient() {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) throw new Error('Unauthorized');
-
-    const context = await getCurrentContext();
-    if (!context) throw new Error('No tenant context');
-
-    return { supabase, user, tenant: context.tenant };
-}
 
 // --- Product Categories ---
 

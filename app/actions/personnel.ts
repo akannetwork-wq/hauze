@@ -3,26 +3,19 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getCurrentContext } from './tenant-context';
+import { getAuthenticatedClient } from './auth-helper';
 
-async function getAuthenticatedClient() {
-    const supabase = await createClient();
-    const context = await getCurrentContext();
-    if (!context) throw new Error('Tenant context not found');
-
-    const { tenant } = context;
-
-    return { supabase, tenant };
-}
 
 // --- Employees ---
 
-export async function getEmployees() {
+export async function getEmployees(limit = 50, offset = 0) {
     try {
         const { supabase } = await getAuthenticatedClient();
         const { data, error } = await supabase
             .from('employees')
             .select('*, personnel_balances(balance)')
-            .order('first_name', { ascending: true });
+            .order('first_name', { ascending: true })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
         return data || [];

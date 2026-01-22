@@ -8,9 +8,10 @@ import Link from 'next/link';
 interface Props {
     initialData: any | null;
     ledger?: any[];
+    isDrawer?: boolean;
 }
 
-export default function EmployeeEditorClient({ initialData, ledger = [] }: Props) {
+export default function EmployeeEditorClient({ initialData, ledger = [], isDrawer = false }: Props) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [employee, setEmployee] = useState(initialData || {
@@ -47,8 +48,21 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
         setLoading(false);
 
         if (result.success) {
-            router.push('/admin/personnel/employees');
-            router.refresh();
+            if (isDrawer) {
+                // If in drawer, we just close it by removing the param from URL without a full reload
+                const url = new URL(window.location.href);
+                url.searchParams.delete('drawer');
+                url.searchParams.delete('id');
+                window.history.pushState({}, '', url.toString());
+                // Trigger a refresh of the list underneath
+                router.refresh();
+
+                // Also need to manually close by triggering any state that Drawer uses if not just URL
+                // But since our DrawerManager uses searchParams, this is enough.
+            } else {
+                router.push('/admin/personnel/employees');
+                router.refresh();
+            }
         } else {
             alert(result.error || 'Kaydedilirken bir hata oluştu.');
         }
@@ -85,21 +99,39 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
     const balance = Number(initialData?.personnel_balances?.[0]?.balance || 0);
 
     return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                        <Link href="/admin/personnel" className="hover:text-indigo-600 transition-colors">Personel</Link>
-                        <span>/</span>
-                        <Link href="/admin/personnel/employees" className="hover:text-indigo-600 transition-colors">Rehber</Link>
-                        <span>/</span>
-                        <span className="text-gray-900 font-medium">{isNew ? 'Yeni Kayıt' : 'Profil Düzenle'}</span>
+        <div className={`space-y-8 ${isDrawer ? 'pb-32' : ''}`}>
+            {!isDrawer && (
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                            <Link href="/admin/personnel" className="hover:text-indigo-600 transition-colors">Personel</Link>
+                            <span>/</span>
+                            <Link href="/admin/personnel/employees" className="hover:text-indigo-600 transition-colors">Rehber</Link>
+                            <span>/</span>
+                            <span className="text-gray-900 font-medium">{isNew ? 'Yeni Kayıt' : 'Profil Düzenle'}</span>
+                        </div>
+                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+                            {isNew ? 'Yeni Personel Kaydı' : `${employee.first_name} ${employee.last_name}`}
+                        </h1>
                     </div>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                        {isNew ? 'Yeni Personel Kaydı' : `${employee.first_name} ${employee.last_name}`}
-                    </h1>
                 </div>
-                <div className="flex gap-3">
+            )}
+
+            {/* Save Button for Drawer (Sticky bottom) */}
+            {isDrawer && (
+                <div className="fixed bottom-0 left-0 right-0 p-8 bg-white/80 backdrop-blur-md border-t border-gray-100 z-50 flex justify-end">
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="bg-indigo-600 text-white px-10 py-4 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50"
+                    >
+                        {loading ? 'KAYDEDİLİYOR...' : 'DEĞİŞİKLİKLERİ KAYDET'}
+                    </button>
+                </div>
+            )}
+
+            {!isDrawer && (
+                <div className="flex justify-end mb-4">
                     <button
                         onClick={handleSave}
                         disabled={loading}
@@ -108,11 +140,11 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
                         {loading ? 'Kaydediliyor...' : 'Kaydet'}
                     </button>
                 </div>
-            </div>
+            )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className={`grid grid-cols-1 ${isDrawer ? '' : 'lg:grid-cols-3'} gap-8`}>
                 {/* Sol Kolon: Bilgiler */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className={`${isDrawer ? '' : 'lg:col-span-2'} space-y-6`}>
                     <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -174,7 +206,7 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
 
                     {!isNew && (
                         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center">
+                            <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center text-left">
                                 <h3 className="font-bold text-gray-900 text-lg">Finansal Geçmiş (Ledger)</h3>
                                 <button
                                     onClick={() => setShowTransactionModal(true)}
@@ -231,7 +263,7 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
                     )}
 
                     <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-                        <div>
+                        <div className="text-left">
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Çalışma Şekli</label>
                             <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl">
                                 <button
@@ -250,7 +282,7 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
                         </div>
 
                         {employee.worker_type === 'monthly' ? (
-                            <div>
+                            <div className="text-left">
                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Net Aylık Maaş</label>
                                 <div className="relative">
                                     <input
@@ -263,7 +295,7 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
                                 </div>
                             </div>
                         ) : (
-                            <div>
+                            <div className="text-left">
                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Günlük Yevmiye</label>
                                 <div className="relative">
                                     <input
@@ -277,7 +309,7 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
                             </div>
                         )}
 
-                        <div>
+                        <div className="text-left">
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">İşe Giriş Tarihi</label>
                             <input
                                 type="date"
@@ -292,13 +324,13 @@ export default function EmployeeEditorClient({ initialData, ledger = [] }: Props
 
             {/* Transaction Modal */}
             {showTransactionModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
                     <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-8 pb-0 flex justify-between items-center">
+                        <div className="p-8 pb-0 flex justify-between items-center text-left">
                             <h3 className="text-xl font-black text-gray-900">İşlem Ekle</h3>
                             <button onClick={() => setShowTransactionModal(false)} className="text-gray-400 hover:text-gray-900">✕</button>
                         </div>
-                        <div className="p-8 space-y-6">
+                        <div className="p-8 space-y-6 text-left">
                             <div>
                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">İşlem Türü</label>
                                 <div className="grid grid-cols-2 gap-2">

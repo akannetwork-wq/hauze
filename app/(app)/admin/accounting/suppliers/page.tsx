@@ -1,10 +1,8 @@
-import { getContacts } from '@/app/actions/accounting';
-import SupplierClient from '@/app/(app)/admin/accounting/suppliers/supplier-client';
+import { Suspense } from 'react';
+import SupplierFetcher from './supplier-fetcher';
 import Link from 'next/link';
 
 export default async function SuppliersPage() {
-    const suppliers = await getContacts('supplier');
-
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="mb-8 flex justify-between items-end">
@@ -18,7 +16,14 @@ export default async function SuppliersPage() {
                 </div>
             </div>
 
-            <SupplierClient initialSuppliers={suppliers} />
+            <Suspense fallback={
+                <div className="bg-white rounded-[3rem] border border-gray-100 shadow-sm p-32 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500">
+                    <div className="w-16 h-16 border-4 border-indigo-50 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Tedarikçiler Yükleniyor...</p>
+                </div>
+            }>
+                <SupplierFetcher />
+            </Suspense>
         </div>
     );
 }

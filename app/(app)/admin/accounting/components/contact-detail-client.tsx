@@ -6,7 +6,7 @@ import TradeDialog from './trade-dialog';
 import PaymentDialog from './payment-dialog';
 import OrderDialog from '../../orders/components/order-dialog';
 import OrderStatusBadge from '../../orders/components/order-status-badge';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface Props {
     contact: any;
@@ -18,10 +18,12 @@ interface Props {
     orders: any[];
     transactions: any[];
     type: 'customer' | 'supplier';
+    isDrawer?: boolean;
 }
 
-export default function ContactDetailClient({ contact, account, totals, orders, transactions, type }: Props) {
+export default function ContactDetailClient({ contact, account, totals, orders, transactions, type, isDrawer = false }: Props) {
     const router = useRouter();
+    const pathname = usePathname();
     const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'transactions'>('summary');
     const [showTradeDialog, setShowTradeDialog] = useState(false);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -35,17 +37,19 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
             {/* Header Section */}
             <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${type === 'customer' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'
-                                }`}>
-                                {type === 'customer' ? 'MÜŞTERİ' : 'TEDARİKÇİ'}
-                            </span>
-                            <span className="text-gray-300">/</span>
-                            <span className="text-gray-400 font-mono text-xs">{account?.code || 'HESAP TANIMSIZ'}</span>
+                    {!isDrawer && (
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${type === 'customer' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'
+                                    }`}>
+                                    {type === 'customer' ? 'MÜŞTERİ' : 'TEDARİKÇİ'}
+                                </span>
+                                <span className="text-gray-300">/</span>
+                                <span className="text-gray-400 font-mono text-xs">{account?.code || 'HESAP TANIMSIZ'}</span>
+                            </div>
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{displayName}</h1>
                         </div>
-                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">{displayName}</h1>
-                    </div>
+                    )}
 
                     <div className="flex flex-col md:flex-row items-center gap-6">
 
@@ -59,6 +63,16 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <Link
+                                href={`${pathname}?drawer=edit-contact&id=${contact.id}`}
+                                className="p-4 rounded-2xl bg-gray-50 text-gray-400 hover:text-gray-900 transition-all border border-gray-100"
+                                title="Bilgileri Düzenle"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </Link>
+
                             <button
                                 onClick={() => setShowPaymentDialog(true)}
                                 className={`px-8 py-4 rounded-2xl font-black transition-all hover:-translate-y-1 bg-white border shadow-sm ${type === 'customer'

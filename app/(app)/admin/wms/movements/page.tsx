@@ -1,26 +1,14 @@
-import { getWarehouses, getLocations, getWmsStock } from '@/app/actions/wms';
-import { getProducts } from '@/app/actions/inventory';
-import MovementClient from '@/app/(app)/admin/wms/movements/movement-client';
+import { Suspense } from 'react';
+import MovementFetcher from './movement-fetcher';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
 
 export default async function MovementsPage() {
-    const supabase = await createClient();
-
-    // Fetch necessary data for the form and list
-    const [warehouses, locations, products, movements] = await Promise.all([
-        getWarehouses(),
-        getLocations(),
-        getProducts({ status: 'active' }),
-        supabase.from('wms_stock_movements').select('*, products(title, sku), from:warehouse_locations!from_location_id(name), to:warehouse_locations!to_location_id(name)').order('created_at', { ascending: false }).limit(50)
-    ]);
-
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="mb-8 flex justify-between items-end">
                 <div>
                     <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                        <Link href="/admin/wms" className="hover:text-indigo-600 transition-colors">WMS</Link>
+                        <Link href="/admin/wms" className="hover:text-indigo-600 transition-colors tracking-tight">WMS</Link>
                         <span>/</span>
                         <span className="text-gray-900 font-medium">Stok Hareketleri</span>
                     </div>
@@ -28,12 +16,14 @@ export default async function MovementsPage() {
                 </div>
             </div>
 
-            <MovementClient
-                warehouses={warehouses}
-                locations={locations}
-                products={products}
-                initialMovements={movements.data || []}
-            />
+            <Suspense fallback={
+                <div className="bg-white rounded-[3rem] border border-gray-100 shadow-sm p-32 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500">
+                    <div className="w-16 h-16 border-4 border-indigo-50 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Hareket Geçmişi Yükleniyor...</p>
+                </div>
+            }>
+                <MovementFetcher />
+            </Suspense>
         </div>
     );
 }

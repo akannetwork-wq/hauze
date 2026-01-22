@@ -17,7 +17,7 @@ export default async function PageEditor({ params }: { params: Promise<{ id: str
     if (!page) notFound();
 
     return (
-        <div className="max-w-6xl mx-auto h-[calc(100vh-100px)] flex flex-col">
+        <div className="p-4 h-[calc(100vh-100px)] flex flex-col">
             <PageEditorClient
                 initialPage={page}
                 allPages={allPages}

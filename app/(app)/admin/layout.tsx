@@ -6,6 +6,7 @@ import { RefreshHandler } from '@/components/admin/refresh-handler';
 import { SidebarSkeleton, HeaderSkeleton, PageSkeleton } from '@/components/admin/skeletons';
 import AdminSidebarFetcher from '@/components/admin/sidebar-fetcher';
 import AdminHeaderFetcher from '@/components/admin/header-fetcher';
+import DrawerManager from '@/components/admin/drawer-manager';
 
 // PPR incremental allows us to mark this layout for partial prerendering
 // Next.js 16 cacheComponents handles the streaming behavior
@@ -34,30 +35,23 @@ export default async function AdminDashboardLayout({
     }
 
     return (
-        <div className="min-h-screen flex bg-gray-50">
-            {/* Sidebar */}
-            <div className="flex flex-col">
-                <Suspense fallback={<SidebarSkeleton />}>
-                    <RefreshHandler />
-                    <AdminSidebarFetcher />
-                </Suspense>
+        <div className="min-h-screen flex bg-gray-50 w-full">
+            {/* Global Drawer Manager (URL Based) */}
+            <DrawerManager />
 
-                <div className="bg-white border-r border-gray-200 p-6 pt-0">
-                    <form action={logout}>
-                        <button className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-2xl transition-all">
-                            <span>🚪</span> Çıkış Yap
-                        </button>
-                    </form>
-                </div>
-            </div>
+            {/* Main Navigation (Compact Sidebar) */}
+            <Suspense fallback={<SidebarSkeleton />}>
+                <RefreshHandler />
+                <AdminSidebarFetcher />
+            </Suspense>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* Main Area (SubNav + Content) */}
+            <div className="flex-1 flex flex-col w-full min-w-0">
                 <Suspense fallback={<HeaderSkeleton />}>
                     <AdminHeaderFetcher />
                 </Suspense>
 
-                <main className="flex-1 p-8">
+                <main className="flex-1 flex overflow-hidden w-full">
                     <Suspense fallback={<PageSkeleton />}>
                         {children}
                     </Suspense>

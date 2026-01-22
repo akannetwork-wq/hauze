@@ -1,18 +1,11 @@
-import { getEmployees, getAttendance } from '@/app/actions/personnel';
-import AttendanceGridClient from './grid-client';
+import { Suspense } from 'react';
+import AttendanceFetcher from './attendance-fetcher';
 import MonthSelector from './month-selector';
 import Link from 'next/link';
-import { headers } from 'next/headers';
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-    await headers();
     const sParams = await searchParams;
     const currentMonth = sParams.month || new Date().toISOString().substring(0, 7);
-
-    const [employees, attendance] = await Promise.all([
-        getEmployees(),
-        getAttendance({ month: currentMonth })
-    ]);
 
     return (
         <div className="p-8 font-sans max-w-[1400px] mx-auto">
@@ -29,11 +22,14 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
                 <MonthSelector defaultValue={currentMonth} />
             </div>
 
-            <AttendanceGridClient
-                employees={employees}
-                initialAttendance={attendance}
-                month={currentMonth}
-            />
+            <Suspense fallback={
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-32 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500">
+                    <div className="w-16 h-16 border-4 border-indigo-50 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Puantaj Cetveli Hazırlanıyor...</p>
+                </div>
+            }>
+                <AttendanceFetcher month={currentMonth} />
+            </Suspense>
         </div>
     );
 }

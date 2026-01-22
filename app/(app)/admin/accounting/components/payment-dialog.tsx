@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import Portal from '@/components/ui/portal';
 import { addTransaction, getOpenOrders } from '@/app/actions/accounting';
 import { toast } from 'react-hot-toast';
+import Drawer from '@/components/admin/ui/drawer';
 
 interface Props {
     contact: any;
@@ -68,7 +70,7 @@ export default function PaymentDialog({ contact, account, type, onClose, onSucce
             if (res.success) {
                 toast.success('İşlem başarıyla kaydedildi.');
                 onSuccess();
-                setTimeout(() => onClose(), 500);
+                setTimeout(() => onClose(), 300);
             } else {
                 toast.error(res.error || 'Bir hata oluştu.');
             }
@@ -80,116 +82,109 @@ export default function PaymentDialog({ contact, account, type, onClose, onSucce
     }
 
     return (
-        <Portal>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose} />
-
-                <div className="relative bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                    <div className={`p-8 ${isCustomer ? 'bg-indigo-600' : 'bg-emerald-600'} text-white`}>
-                        <h2 className="text-2xl font-black tracking-tight">{actionTitle}</h2>
-                        <p className="opacity-80 text-sm mt-1">{contact.company_name || `${contact.first_name} ${contact.last_name}`}</p>
+        <Drawer
+            isOpen={true}
+            onClose={onClose}
+            title={actionTitle}
+            subtitle={contact.company_name || `${contact.first_name} ${contact.last_name}`}
+        >
+            <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-300 pb-20">
+                {/* Related Order Selection */}
+                {openOrders.length > 0 && (
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">İlişkili Sipariş (Opsiyonel)</label>
+                        <select
+                            className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-inner"
+                            value={form.orderId}
+                            onChange={e => {
+                                const order = openOrders.find(o => o.id === e.target.value);
+                                setForm({
+                                    ...form,
+                                    orderId: e.target.value,
+                                    amount: order ? (Number(order.total) - Number(order.paid_amount)).toString() : form.amount
+                                });
+                            }}
+                        >
+                            <option value="">Genel Ödeme (Sipariş Bağımsız)</option>
+                            {openOrders.map(o => (
+                                <option key={o.id} value={o.id}>
+                                    #{o.id.slice(0, 8).toUpperCase()} - {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(Number(o.total) - Number(o.paid_amount))} Kalan
+                                </option>
+                            ))}
+                        </select>
                     </div>
+                )}
 
-                    <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
-                        {openOrders.length > 0 && (
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">İlişkili Sipariş (Opsiyonel)</label>
-                                <select
-                                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500 appearance-none"
-                                    value={form.orderId}
-                                    onChange={e => {
-                                        const order = openOrders.find(o => o.id === e.target.value);
-                                        setForm({
-                                            ...form,
-                                            orderId: e.target.value,
-                                            amount: order ? (Number(order.total) - Number(order.paid_amount)).toString() : form.amount
-                                        });
-                                    }}
-                                >
-                                    <option value="">Genel Ödeme (Sipariş Bağımsız)</option>
-                                    {openOrders.map(o => (
-                                        <option key={o.id} value={o.id}>
-                                            #{o.id.slice(0, 8).toUpperCase()} - {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(Number(o.total) - Number(o.paid_amount))} Kalan
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
+                {/* Amount Input */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tutar (TL)</label>
+                    <div className="relative">
+                        <input
+                            required
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="w-full bg-gray-50 border-none rounded-3xl px-6 py-6 text-4xl font-black text-gray-900 focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-gray-200 shadow-inner"
+                            value={form.amount}
+                            onChange={e => setForm({ ...form, amount: e.target.value })}
+                        />
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xl font-black text-gray-300">TL</span>
+                    </div>
+                </div>
 
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tutar (TL)</label>
-                            <input
-                                required
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-2xl font-black text-gray-900 focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-gray-200"
-                                value={form.amount}
-                                onChange={e => setForm({ ...form, amount: e.target.value })}
-                            />
-                        </div>
+                {/* Date Selection */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">İşlem Tarihi</label>
+                    <input
+                        type="date"
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                        value={form.date}
+                        onChange={e => setForm({ ...form, date: e.target.value })}
+                    />
+                </div>
 
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Ödeme Yöntemi</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {PAYMENT_METHODS.map(m => (
-                                    <button
-                                        key={m.id}
-                                        type="button"
-                                        onClick={() => setForm({ ...form, method: m.id })}
-                                        className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-sm font-bold ${form.method === m.id
-                                            ? (isCustomer ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-emerald-600 bg-emerald-50 text-emerald-600')
-                                            : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'
-                                            }`}
-                                    >
-                                        <span className="text-xl">{m.icon}</span>
-                                        {m.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tarih</label>
-                                <input
-                                    type="date"
-                                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                                    value={form.date}
-                                    onChange={e => setForm({ ...form, date: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Açıklama (Opsiyonel)</label>
-                                <textarea
-                                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500 min-h-[80px] resize-none"
-                                    placeholder="İşlem ile ilgili not..."
-                                    value={form.description}
-                                    onChange={e => setForm({ ...form, description: e.target.value })}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4 pt-4">
+                {/* Payment Methods Grid */}
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Ödeme Yöntemi</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        {PAYMENT_METHODS.map(m => (
                             <button
+                                key={m.id}
                                 type="button"
-                                onClick={onClose}
-                                className="flex-1 px-6 py-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm"
-                            >
-                                İptal
-                            </button>
-                            <button
-                                disabled={loading}
-                                type="submit"
-                                className={`flex-[2] px-6 py-4 rounded-2xl font-black text-white shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 text-sm ${isCustomer ? 'bg-indigo-600 shadow-indigo-100 hover:bg-indigo-700' : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700'
+                                onClick={() => setForm({ ...form, method: m.id })}
+                                className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-sm font-bold ${form.method === m.id
+                                    ? (isCustomer ? 'border-indigo-600 bg-indigo-50 text-indigo-600 shadow-sm' : 'border-emerald-600 bg-emerald-50 text-emerald-600 shadow-sm')
+                                    : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200'
                                     }`}
                             >
-                                {loading ? 'Kaydediliyor...' : 'Kaydet'}
+                                <span className="text-xl">{m.icon}</span>
+                                {m.name}
                             </button>
-                        </div>
-                    </form>
+                        ))}
+                    </div>
                 </div>
-            </div>
-        </Portal>
+
+                {/* Description Textarea */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Açıklama</label>
+                    <textarea
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-indigo-500 min-h-[120px] resize-none shadow-inner"
+                        placeholder="İşlem ile ilgili not..."
+                        value={form.description}
+                        onChange={e => setForm({ ...form, description: e.target.value })}
+                    />
+                </div>
+
+                {/* Submit Action (Fixed at bottom within drawer if possible, but Drawer handles scroll) */}
+                <button
+                    disabled={loading}
+                    type="submit"
+                    className={`w-full py-5 rounded-3xl font-black text-white shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 text-sm mt-4 ${isCustomer ? 'bg-indigo-600 shadow-indigo-200 hover:bg-indigo-700' : 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700'
+                        }`}
+                >
+                    {loading ? 'Kaydediliyor...' : `✨ ${actionTitle}`}
+                </button>
+            </form>
+        </Drawer>
     );
 }
