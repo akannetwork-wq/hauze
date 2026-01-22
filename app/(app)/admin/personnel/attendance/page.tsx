@@ -2,8 +2,10 @@ import { getEmployees, getAttendance } from '@/app/actions/personnel';
 import AttendanceGridClient from './grid-client';
 import MonthSelector from './month-selector';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+    await headers();
     const sParams = await searchParams;
     const currentMonth = sParams.month || new Date().toISOString().substring(0, 7);
 

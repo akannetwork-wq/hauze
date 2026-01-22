@@ -2,10 +2,12 @@
 import { getTenants } from '@/app/actions/terminal-queries';
 import CreateTenantForm from './create-form';
 import ResetTenantButton from './reset-button';
+import { headers } from 'next/headers';
 
 // Next.js 16 handles dynamic rendering automatically with cacheComponents
 
 export default async function TenantsPage() {
+    await headers();
     const tenants = await getTenants();
 
     return (

@@ -10,15 +10,15 @@ export async function createClient() {
         // Next.js 16: cookies() may reject during prerendering
         // Return a client with no cookies for the static shell pass
         return createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
             { cookies: { get() { return undefined }, set() { }, remove() { } } }
         );
     }
 
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
         {
             cookies: {
                 get(name: string) {

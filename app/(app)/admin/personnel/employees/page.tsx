@@ -1,8 +1,10 @@
 import { getEmployees } from '@/app/actions/personnel';
 import EmployeeListClient from './list-client';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 
 export default async function EmployeeListPage() {
+    await headers();
     const employees = await getEmployees();
 
     return (

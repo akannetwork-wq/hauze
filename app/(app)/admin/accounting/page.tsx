@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { getAccountingSummary } from '@/app/actions/accounting';
+import { headers } from 'next/headers';
 
 export default async function AccountingDashboard() {
+    await headers();
     const summary = await getAccountingSummary();
 
     return (

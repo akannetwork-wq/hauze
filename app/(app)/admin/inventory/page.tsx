@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { getProducts, getCategories } from '@/app/actions/inventory';
 import { getInventory } from '@/app/actions/commerce';
+import { headers } from 'next/headers';
 
 export default async function InventoryDashboard() {
+    await headers();
     const [products, inventory] = await Promise.all([
         getProducts(),
         getInventory()

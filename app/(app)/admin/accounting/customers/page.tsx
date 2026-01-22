@@ -1,8 +1,10 @@
 import { getContacts } from '@/app/actions/accounting';
 import CustomerClient from '@/app/(app)/admin/accounting/customers/customer-client';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 
 export default async function CustomersPage() {
+    await headers();
     const customers = await getContacts('customer');
 
     return (
