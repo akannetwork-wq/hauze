@@ -1,12 +1,14 @@
-import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
 import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
+import { createServiceClient } from '@/lib/supabase/service';
 
 // Cache tenant lookup for 1 hour
+// CRITICAL: We use createServiceClient (cookie-less) because unstable_cache 
+// runs in a context where cookies() are not available.
 export const getTenantByHostname = unstable_cache(
     async (hostname: string) => {
-        const supabase = await createClient();
+        const supabase = createServiceClient();
         const { data, error } = await supabase
             .from('tenants')
             .select('id, name, config')
@@ -22,7 +24,7 @@ export const getTenantByHostname = unstable_cache(
 // Cache module lookup for 1 hour
 export const getTenantModules = unstable_cache(
     async (tenantId: string) => {
-        const supabase = await createClient();
+        const supabase = createServiceClient();
         const { data, error } = await supabase
             .from('tenant_modules')
             .select(`
