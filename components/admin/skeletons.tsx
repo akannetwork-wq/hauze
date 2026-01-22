@@ -32,3 +32,17 @@ export function HeaderSkeleton() {
         </header>
     );
 }
+
+export function PageSkeleton() {
+    return (
+        <div className="space-y-6 animate-pulse">
+            <div className="h-10 bg-gray-200 rounded-2xl w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="h-40 bg-gray-100 rounded-[2rem]"></div>
+                <div className="h-40 bg-gray-100 rounded-[2rem]"></div>
+                <div className="h-40 bg-gray-100 rounded-[2rem]"></div>
+            </div>
+            <div className="h-80 bg-gray-50 rounded-[2rem]"></div>
+        </div>
+    );
+}

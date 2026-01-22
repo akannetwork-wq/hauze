@@ -1,16 +1,16 @@
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { logout } from '@/app/actions/auth';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function TerminalLayout({
-
     children,
 }: {
     children: React.ReactNode;
 }) {
-
+    // Note: In Next.js 16 with cacheComponents, this layout shell will be 
+    // static-ish and the following will trigger a streaming response.
     const supabase = await createClient();
 
     // 1. Get User
@@ -20,10 +20,9 @@ export default async function TerminalLayout({
     }
 
     // 2. Check System Tenant Membership (NETSPACE)
-    // We assume 'NETSPACE' is the system tenant name.
     const { data: systemTenant } = await supabase
         .from('tenants')
-        .select('id')
+        .select('*')
         .eq('name', 'NETSPACE')
         .single();
 
@@ -59,11 +58,8 @@ export default async function TerminalLayout({
         );
     }
 
-
-
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex">
-
             <aside className="w-64 border-r border-gray-800 p-4">
                 <h1 className="text-xl font-bold mb-8 tracking-wider text-green-400">TERMINAL</h1>
                 <nav className="space-y-2">
@@ -78,7 +74,9 @@ export default async function TerminalLayout({
                 </div>
             </aside>
             <main className="flex-1 p-6 overflow-auto">
-                {children}
+                <Suspense fallback={<div className="animate-pulse text-gray-500">Loading Terminal Content...</div>}>
+                    {children}
+                </Suspense>
             </main>
         </div>
     );

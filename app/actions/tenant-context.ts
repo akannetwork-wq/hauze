@@ -48,7 +48,14 @@ export const getTenantModules = unstable_cache(
 // Memoize context for the duration of a single request
 export const getCurrentContext = cache(async () => {
     // 1. Get Hostname
-    const headersList = await headers();
+    let headersList;
+    try {
+        headersList = await headers();
+    } catch (e) {
+        // Next.js 16: headers() may reject during prerendering
+        return null;
+    }
+
     const host = headersList.get('host')!;
     const hostname = host.split(':')[0];
 

@@ -3,12 +3,12 @@ import { logout } from '@/app/actions/auth';
 import { getCurrentContext } from '@/app/actions/tenant-context';
 import { Metadata } from 'next';
 import { RefreshHandler } from '@/components/admin/refresh-handler';
-import { SidebarSkeleton, HeaderSkeleton } from '@/components/admin/skeletons';
+import { SidebarSkeleton, HeaderSkeleton, PageSkeleton } from '@/components/admin/skeletons';
 import AdminSidebarFetcher from '@/components/admin/sidebar-fetcher';
 import AdminHeaderFetcher from '@/components/admin/header-fetcher';
 
 // PPR incremental allows us to mark this layout for partial prerendering
-export const experimental_ppr = true;
+// Next.js 16 cacheComponents handles the streaming behavior
 
 export async function generateMetadata(): Promise<Metadata> {
     const context = await getCurrentContext();
@@ -25,11 +25,10 @@ export default async function AdminDashboardLayout({
 }) {
     return (
         <div className="min-h-screen flex bg-gray-50">
-            <RefreshHandler />
-
             {/* Sidebar */}
             <div className="flex flex-col">
                 <Suspense fallback={<SidebarSkeleton />}>
+                    <RefreshHandler />
                     <AdminSidebarFetcher />
                 </Suspense>
 
@@ -49,7 +48,9 @@ export default async function AdminDashboardLayout({
                 </Suspense>
 
                 <main className="flex-1 p-8">
-                    {children}
+                    <Suspense fallback={<PageSkeleton />}>
+                        {children}
+                    </Suspense>
                 </main>
             </div>
         </div>

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { Suspense } from 'react';
 import { getPageBySlug } from '@/app/actions/cms-public';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -13,14 +12,27 @@ interface PageProps {
     }>;
 }
 
-export default async function UniversalPage({ params }: PageProps) {
+export default function UniversalPage({ params }: PageProps) {
+    return (
+        <Suspense fallback={<div className="p-20 text-center animate-pulse text-gray-400">Loading Page...</div>}>
+            <UniversalPageContent params={params} />
+        </Suspense>
+    );
+}
+
+async function UniversalPageContent({ params }: PageProps) {
     const { slug } = await params;
-    const headersList = await headers();
-    const host = headersList.get('host')!;
-    const hostname = host.split(':')[0];
+
+    let hostname = 'localhost';
+    try {
+        const headersList = await headers();
+        const host = headersList.get('host')!;
+        hostname = host.split(':')[0];
+    } catch (e) {
+        // Fallback for prerender pass
+    }
 
     const slugPath = slug ? slug.join('/') : 'home';
-
     const result = await getPageBySlug(hostname, slugPath);
 
     if (!result) {
@@ -47,7 +59,6 @@ export default async function UniversalPage({ params }: PageProps) {
                     <div className="font-bold text-xl">{tenant.name}</div>
                     <nav className="space-x-4 text-sm font-medium">
                         <a href="/home" className="hover:text-indigo-600">Home</a>
-                        {/* Dynamic Links would go here */}
                     </nav>
                 </header>
 

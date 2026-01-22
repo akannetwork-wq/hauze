@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import { getEmployees, getPersonnelTasks, getAttendance, getSalaryStats } from '@/app/actions/personnel';
 
+import { headers } from 'next/headers';
+
 export default async function PersonnelDashboard() {
+    // Access a dynamic data source first to mark the segment as dynamic for deterministic shells in Next.js 16
+    await headers();
+
     const [employees, tasks, attendance, salaryStats] = await Promise.all([
         getEmployees(),
         getPersonnelTasks(),
