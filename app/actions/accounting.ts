@@ -18,7 +18,7 @@ async function getAuthenticatedClient() {
 
 // --- Contacts (Customers/Suppliers) ---
 
-export async function getContacts(type?: 'customer' | 'supplier' | 'partner') {
+export async function getContacts(type?: 'customer' | 'supplier' | 'partner', limit = 50, offset = 0) {
     try {
         const { supabase, tenant } = await getAuthenticatedClient();
         let query = supabase
@@ -28,7 +28,9 @@ export async function getContacts(type?: 'customer' | 'supplier' | 'partner') {
 
         if (type) query = query.eq('type', type);
 
-        const { data, error } = await query.order('company_name', { ascending: true });
+        const { data, error } = await query
+            .order('company_name', { ascending: true })
+            .range(offset, offset + limit - 1);
 
         if (error) {
             console.error('getContacts Database Error:', JSON.stringify(error, null, 2));
@@ -101,7 +103,7 @@ export async function getAccounts() {
     }
 }
 
-export async function getTransactions(accountId?: string) {
+export async function getTransactions(accountId?: string, limit = 100, offset = 0) {
     try {
         const { supabase, tenant } = await getAuthenticatedClient();
         let query = supabase
@@ -111,7 +113,10 @@ export async function getTransactions(accountId?: string) {
 
         if (accountId) query = query.eq('account_id', accountId);
 
-        const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false });
+        const { data, error } = await query
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
         return data || [];
@@ -199,10 +204,28 @@ export async function addTransaction(transaction: any) {
 
 // --- Dashboard Summaries ---
 
-export async function getAccountingSummary() {
+import { getCachedReport, saveReportCache } from './reports';
+
+export async function getAccountingSummary(forceRefresh = false) {
     try {
         const { supabase, tenant } = await getAuthenticatedClient();
 
+        // 1. Try Cache First
+        if (!forceRefresh) {
+            const cached = await getCachedReport('accounting_summary');
+            if (cached) {
+                const lastUpdated = new Date(cached.updated_at).getTime();
+                const now = new Date().getTime();
+                const oneDay = 24 * 60 * 60 * 1000;
+
+                // If cache is less than 1 day old, return it
+                if (now - lastUpdated < oneDay) {
+                    return cached.data;
+                }
+            }
+        }
+
+        // 2. Calculate Fresh (Only if no cache or forced)
         // Total Receivables (Customers with positive balance)
         const { data: receivables } = await supabase
             .from('contact_balances')
@@ -212,8 +235,6 @@ export async function getAccountingSummary() {
             .gt('balance', 0);
 
         // Total Payables (Suppliers with positive balance/credit)
-        // Note: in our logic, credit (supplier debt) is negative in the balance sum, 
-        // but we might want to represent it absolute for the dashboard.
         const { data: payables } = await supabase
             .from('contact_balances')
             .select('balance')
@@ -237,7 +258,6 @@ export async function getAccountingSummary() {
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
 
-        // 1. Get transaction-active account IDs for this month
         const { data: activeAccountIds } = await supabase
             .from('transactions')
             .select('account_id')
@@ -246,7 +266,6 @@ export async function getAccountingSummary() {
 
         const uniqueAccountIds = [...new Set((activeAccountIds || []).map(t => t.account_id))];
 
-        // 2. Get the contacts associated with these accounts
         let activeContacts: any[] = [];
         if (uniqueAccountIds.length > 0) {
             const { data: accounts } = await supabase
@@ -268,16 +287,22 @@ export async function getAccountingSummary() {
             }
         }
 
-        return {
+        const summary = {
             totalReceivables,
             totalPayables,
             totalCash,
             netStatus: totalReceivables - totalPayables + totalCash,
-            activeContacts
+            activeContacts,
+            lastCalculated: new Date().toISOString()
         };
+
+        // 3. Save to Cache for next time
+        await saveReportCache('accounting_summary', summary);
+
+        return summary;
     } catch (error) {
         console.error('getAccountingSummary Error:', error);
-        return { totalReceivables: 0, totalPayables: 0, totalCash: 0, netStatus: 0, activeContacts: [] };
+        return { totalReceivables: 0, totalPayables: 0, totalCash: 0, netStatus: 0, activeContacts: [], lastCalculated: null };
     }
 }
 

@@ -130,9 +130,13 @@ export async function getProducts(options: {
     search?: string,
     status?: string,
     sortBy?: string,
-    sortOrder?: 'asc' | 'desc'
+    sortOrder?: 'asc' | 'desc',
+    limit?: number,
+    offset?: number
 } = {}) {
     const { supabase, tenant } = await getAuthenticatedClient();
+    const limit = options.limit || 50;
+    const offset = options.offset || 0;
 
     let query = supabase
         .from('products')
@@ -184,10 +188,11 @@ export async function getProducts(options: {
         if (options.status === 'passive') query = query.eq('is_active', false);
     }
 
-    // Sorting
     const sortBy = options.sortBy || 'created_at';
     const sortOrder = options.sortOrder || 'desc';
-    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+    query = query
+        .order(sortBy, { ascending: sortOrder === 'asc' })
+        .range(offset, offset + limit - 1);
 
     const { data: products, error } = await query;
 
@@ -417,4 +422,71 @@ export async function deleteProduct(id: string) {
 
     revalidatePath('/admin/inventory');
     return { success: true };
+}
+
+import { getCachedReport, saveReportCache } from './reports';
+
+export async function getInventorySummary(forceRefresh = false) {
+    try {
+        const { supabase, tenant } = await getAuthenticatedClient();
+
+        // 1. Try Cache
+        if (!forceRefresh) {
+            const cached = await getCachedReport('inventory_summary');
+            if (cached) {
+                const lastUpdated = new Date(cached.updated_at).getTime();
+                const now = new Date().getTime();
+                if (now - lastUpdated < 24 * 60 * 60 * 1000) return cached.data;
+            }
+        }
+
+        // 2. Calculate Fresh
+        // We get all products and inventory to calculate stats. 
+        // In a very large system, we would calculate this via a SQL view or trigger.
+        const [products, { data: inventory }] = await Promise.all([
+            getProducts({ limit: 5000 }), // Upper bound for summary
+            supabase.from('inventory_items').select('*').eq('tenant_id', tenant.id)
+        ]);
+
+        const inventoryMap = (inventory || []).reduce((acc: any, item: any) => {
+            acc[item.sku] = item;
+            return acc;
+        }, {});
+
+        const stats = {
+            products: {
+                total: products.filter(p => p.type === 'product').length,
+                lowStock: products.filter(p => {
+                    if (p.type !== 'product') return false;
+                    const stock = inventoryMap[p.sku]?.on_hand || 0;
+                    return stock < 10;
+                }).length
+            },
+            consumables: {
+                total: products.filter(p => p.type === 'consumable').length,
+                lowStock: products.filter(p => {
+                    if (p.type !== 'consumable') return false;
+                    const stock = inventoryMap[p.sku]?.on_hand || 0;
+                    return stock < 10;
+                }).length
+            },
+            services: {
+                total: products.filter(p => p.type === 'service').length
+            },
+            lastCalculated: new Date().toISOString()
+        };
+
+        // 3. Save Cache
+        await saveReportCache('inventory_summary', stats);
+
+        return stats;
+    } catch (error) {
+        console.error('getInventorySummary Error:', error);
+        return {
+            products: { total: 0, lowStock: 0 },
+            consumables: { total: 0, lowStock: 0 },
+            services: { total: 0 },
+            lastCalculated: null
+        };
+    }
 }

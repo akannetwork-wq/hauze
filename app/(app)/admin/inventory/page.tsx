@@ -1,35 +1,10 @@
 import Link from 'next/link';
-import { getProducts, getCategories } from '@/app/actions/inventory';
-import { getInventory } from '@/app/actions/commerce';
+import { getInventorySummary } from '@/app/actions/inventory';
 import { headers } from 'next/headers';
 
 export default async function InventoryDashboard() {
     await headers();
-    const [products, inventory] = await Promise.all([
-        getProducts(),
-        getInventory()
-    ]);
-
-    // Calculate stats per type
-    const stats = {
-        products: {
-            total: products.filter(p => p.type === 'product').length,
-            lowStock: Object.values(inventory).filter((item: any) => {
-                const p = products.find(prod => prod.sku === item.sku);
-                return p?.type === 'product' && (item.state as any).on_hand < 10;
-            }).length
-        },
-        consumables: {
-            total: products.filter(p => p.type === 'consumable').length,
-            lowStock: Object.values(inventory).filter((item: any) => {
-                const p = products.find(prod => prod.sku === item.sku);
-                return p?.type === 'consumable' && (item.state as any).on_hand < 10;
-            }).length
-        },
-        services: {
-            total: products.filter(p => p.type === 'service').length
-        }
-    };
+    const stats = await getInventorySummary();
 
     return (
         <div className="p-8 font-sans max-w-[1600px] mx-auto">

@@ -1,6 +1,4 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
 
 export const config = {
     matcher: [
@@ -28,19 +26,6 @@ export default async function middleware(req: NextRequest) {
         },
     });
 
-    // We only need a full Supabase session refresh for admin areas or logins
-    const isAdminPath = url.pathname.startsWith('/admin') ||
-        url.pathname.startsWith('/terminal') ||
-        url.pathname.startsWith('/login');
-
-    let user = null;
-
-    if (isAdminPath) {
-        const sessionUpdate = await updateSession(req);
-        response = sessionUpdate.response;
-        user = sessionUpdate.user;
-    }
-
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost';
     const isRootDomain = hostname === rootDomain;
 
@@ -65,26 +50,6 @@ export default async function middleware(req: NextRequest) {
     // Terminal Logic (Super Admin)
     // ---------------------------------------------------------
     if (isTerminal) {
-        if (url.pathname.startsWith('/login') && user) {
-            return NextResponse.redirect(new URL('/terminal', req.url));
-        }
-        // Protect /terminal route (but allow /login)
-        // Note: Our structure is /terminal/... BUT via rewrite. 
-        // The incoming URL is /dashboard, rewritten to /terminal/dashboard.
-        // Auth check should happen on the rewritten path logic or here.
-        // Since we rewrite, we must ensure we don't rewrite unauthed users to protected routes.
-
-        // Simplification: We rewrite first, then App Router layout checks auth?
-        // No, Middleware is better for redirects.
-
-        // If not logged in and not on login page -> Redirect to login
-        if (!user && !url.pathname.startsWith('/login')) {
-            const loginUrl = new URL('/login', req.url);
-            // loginUrl.searchParams.set('next', url.pathname);
-            return NextResponse.redirect(loginUrl);
-        }
-
-
         // Fix for localhost: prevent double-rewriting if path already starts with /terminal
         if (hostname.startsWith('terminal')) {
             if (url.pathname === '/') {
@@ -103,47 +68,13 @@ export default async function middleware(req: NextRequest) {
     // Tenant Admin Logic
     // ---------------------------------------------------------
     if (isApp) {
-        // If logged in, redirect away from login page
-        if (url.pathname.startsWith('/login') && user) {
-            return NextResponse.redirect(new URL('/admin', req.url));
-        }
-
-        // If not logged in and not on login page -> Redirect to login
-        if (!user && !url.pathname.startsWith('/login')) {
-            return NextResponse.redirect(new URL('/login', req.url));
-        }
-
         // Rewrite Logic
         // /       -> /admin (Dashboard)
         // /pages  -> /admin/pages
-        // /login  -> /login (No rewrite needed if file is at app/login?? Wait.)
-
-        // Our structure:
-        // app/(app)/admin/... -> Mapped to /admin
-        // app/(app)/login/... -> Mapped to /login
 
         // If URL is /login, we want to render app/(app)/login/page.tsx
         // The Rewrite Target should be /login (if it's in the root of (app)) OR /admin/login?
 
-        // In our file structure:
-        // app/(app)/login/page.tsx
-        // app/(app)/admin/page.tsx
-
-        // Because they are in a Route Group (app), they are at the ROOT of the URL space effectively.
-        // So /login maps to app/(app)/login/page.tsx automatically?
-        // NO. Route Groups don't add segments.
-        // So app/(app)/login/page.tsx matches URL /login.
-        // app/(app)/admin/page.tsx matches URL /admin.
-
-        // So if user visits app.netspace.com/login:
-        // -> Matches /login
-        // -> Next.js finds app/(app)/login/page.tsx.
-        // -> Valid.
-
-        // If user visits app.netspace.com/ (root):
-        // -> Matches /
-        // -> We want to show Dashboard.
-        // -> Rewrite / -> /admin ?
         if (url.pathname === '/') {
             return NextResponse.rewrite(new URL('/admin', req.url));
         }

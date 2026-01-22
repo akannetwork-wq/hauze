@@ -10,6 +10,9 @@ import AdminHeaderFetcher from '@/components/admin/header-fetcher';
 // PPR incremental allows us to mark this layout for partial prerendering
 // Next.js 16 cacheComponents handles the streaming behavior
 
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+
 export async function generateMetadata(): Promise<Metadata> {
     const context = await getCurrentContext();
     if (!context) return { title: 'Netspace Admin' };
@@ -23,6 +26,13 @@ export default async function AdminDashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        redirect('/login');
+    }
+
     return (
         <div className="min-h-screen flex bg-gray-50">
             {/* Sidebar */}
