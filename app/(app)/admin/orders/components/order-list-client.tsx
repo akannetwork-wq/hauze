@@ -27,7 +27,7 @@ export default function OrderListClient({ initialOrders }: Props) {
 
     // Type filter (Url synced)
     const searchParams = useSearchParams();
-    const typeFilter = (searchParams.get('type') as 'sale' | 'purchase' | 'all') || 'all';
+    const typeFilter = (searchParams.get('type') as 'sale' | 'purchase' | 'service' | 'all') || 'all';
 
     const setTypeFilter = (val: string) => {
         const params = new URLSearchParams(searchParams.toString());
