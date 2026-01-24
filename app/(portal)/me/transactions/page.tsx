@@ -7,6 +7,8 @@ import {
     ArrowDownCircleIcon
 } from '@heroicons/react/24/solid';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PersonnelTransactionsPage() {
     const { supabase, employee } = await getAuthenticatedClient();
 

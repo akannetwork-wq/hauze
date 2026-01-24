@@ -9,6 +9,8 @@ import {
 import { logout } from '@/app/actions/auth';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PersonnelPortalPage() {
     const { supabase, employee, user, tenant } = await getAuthenticatedClient();
 
