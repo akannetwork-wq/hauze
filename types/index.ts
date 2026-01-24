@@ -174,6 +174,8 @@ export interface OrderLine {
     quantity: number;
     price?: number;
     name?: string;
+    service_values?: Record<string, any>;
+    productId?: string;
 }
 
 /**
@@ -223,6 +225,23 @@ export interface Product {
         description?: string;
         content?: string;
     }>;
+    service_config?: {
+        inputs?: Array<{
+            id: string;
+            label: string;
+            type: string;
+            placeholder?: string;
+            unit?: string;
+            options?: string[];
+        }>;
+        rules?: Array<{
+            id: string;
+            fieldId: string;
+            operation: string;
+            value: number;
+            matchValue?: string;
+        }>;
+    };
     created_at: string;
     updated_at: string;
 

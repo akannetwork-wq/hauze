@@ -13,15 +13,15 @@ export default async function PersonnelDashboardContent() {
         getSalaryStats()
     ]);
 
-    const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
+    const activeTasks = tasks.filter((t: any) => t.status !== 'completed' && t.status !== 'cancelled');
 
-    // Revision: Only daily workers' positive earnings (hakediş)
-    const totalDailyBalance = employees
-        .filter(emp => emp.worker_type === 'daily')
-        .reduce((acc, emp) => {
-            const balance = Number((emp as any).personnel_balances?.[0]?.balance) || 0;
-            return acc + (balance > 0 ? balance : 0);
-        }, 0);
+    // Revision: Use the same unified balance logic as Accounting Summary for the stat card
+    // Total Debt = Sum of all POSITIVE (HR-Finance) balances
+    // Balance > 0 means the Company owes the Employee (Liability)
+    const totalAccruedDebt = employees.reduce((acc: number, emp: any) => {
+        const balance = Number(emp.personnel_balances?.[0]?.balance) || 0;
+        return acc + (balance > 0 ? balance : 0);
+    }, 0);
 
     return (
         <div className="animate-in fade-in duration-700">
@@ -48,7 +48,7 @@ export default async function PersonnelDashboardContent() {
                                 </span> ödeme planlanıyor.
                             </h2>
                             <p className="text-indigo-100/70 max-w-md">
-                                Sabit maaşlı personellerin hak edişleri ve yevmiyeli personelin biriken alacaklarının toplamıdır.
+                                Bu rakam; mevcut borçlarınız ve henüz tahakkuk etmemiş beklenen maaşların (bu hafta için) toplamıdır.
                             </p>
                         </div>
 
@@ -106,11 +106,12 @@ export default async function PersonnelDashboardContent() {
                 <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm border-b-4 border-b-emerald-500 relative group transition-all hover:shadow-lg">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner">💰</div>
-                        <h3 className="font-bold text-gray-600 uppercase text-xs tracking-widest">Yevmiyeli Hakediş</h3>
+                        <h3 className="font-bold text-gray-600 uppercase text-xs tracking-widest">Net Personel Borcu</h3>
                     </div>
                     <div className="text-4xl font-black text-gray-900 text-emerald-600">
-                        {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalDailyBalance)}
+                        {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalAccruedDebt)}
                     </div>
+                    <p className="text-[9px] text-gray-400 font-bold mt-2 uppercase">Şu an ödenmesi gereken birikmiş tutar</p>
                     <Link
                         href="/admin/personnel/employees?type=daily"
                         className="absolute top-6 right-6 text-xs text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-emerald-50 px-2 py-1 rounded-lg"
@@ -125,7 +126,7 @@ export default async function PersonnelDashboardContent() {
                         <h3 className="font-bold text-gray-600 uppercase text-xs tracking-widest">Bugünlük Puantaj</h3>
                     </div>
                     <div className="text-4xl font-black text-gray-900">
-                        {attendance.filter(a => a.date === new Date().toISOString().substring(0, 10)).length} / {employees.length}
+                        {attendance.filter((a: any) => a.date === new Date().toISOString().substring(0, 10)).length} / {employees.length}
                     </div>
                 </div>
             </div>

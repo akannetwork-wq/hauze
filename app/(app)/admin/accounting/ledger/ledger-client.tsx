@@ -10,9 +10,10 @@ interface Props {
 export default function LedgerClient({ initialAccounts }: Props) {
     const [accounts] = useState(initialAccounts);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState<'all' | 'customer' | 'supplier' | 'other'>('all');
+    const [filterType, setFilterType] = useState<'all' | 'customer' | 'supplier' | 'safe' | 'bank' | 'pos' | 'check' | 'other'>('all');
     const [sortBy, setSortBy] = useState<'code' | 'balance'>('code');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [selectedAccount, setSelectedAccount] = useState<any>(null);
 
     const filteredAccounts = accounts
         .filter(acc => {
@@ -21,11 +22,27 @@ export default function LedgerClient({ initialAccounts }: Props) {
                 acc.code.toLowerCase().includes(search) ||
                 acc.name.toLowerCase().includes(search);
 
-            if (filterType === 'all') return matchesSearch;
-            if (filterType === 'customer') return matchesSearch && acc.code.startsWith('120');
-            if (filterType === 'supplier') return matchesSearch && acc.code.startsWith('320');
-            if (filterType === 'other') return matchesSearch && !acc.code.startsWith('120') && !acc.code.startsWith('320');
-            return matchesSearch;
+            if (!matchesSearch) return false;
+
+            if (filterType === 'all') return true;
+            if (filterType === 'customer') return acc.code.startsWith('120');
+            if (filterType === 'supplier') return acc.code.startsWith('320');
+
+            // Asset filters
+            if (filterType === 'safe') return acc.type === 'safe' || acc.code.startsWith('100');
+            if (filterType === 'bank') return acc.type === 'bank' || acc.code.startsWith('102');
+            if (filterType === 'pos') return acc.type === 'pos' || acc.code.startsWith('108');
+            if (filterType === 'check') return acc.type === 'check_portfolio' || acc.code.startsWith('101');
+
+            if (filterType === 'other') {
+                return !acc.code.startsWith('120') &&
+                    !acc.code.startsWith('320') &&
+                    !acc.code.startsWith('100') &&
+                    !acc.code.startsWith('102') &&
+                    !acc.code.startsWith('108') &&
+                    !acc.code.startsWith('101');
+            }
+            return true;
         })
         .sort((a, b) => {
             if (sortBy === 'code') {
@@ -55,13 +72,19 @@ export default function LedgerClient({ initialAccounts }: Props) {
 
                 <div className="flex items-center gap-3">
                     <select
-                        className="bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 shadow-sm"
+                        className="bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 shadow-sm font-medium text-gray-700"
                         value={filterType}
                         onChange={e => setFilterType(e.target.value as any)}
                     >
                         <option value="all">Tüm Hesaplar</option>
                         <option value="customer">Alıcılar (120)</option>
                         <option value="supplier">Satıcılar (320)</option>
+                        <hr />
+                        <option value="safe">Kasalar (100)</option>
+                        <option value="bank">Bankalar (102)</option>
+                        <option value="pos">POS Cihazları (108)</option>
+                        <option value="check">Çek Portföyü (101)</option>
+                        <hr />
                         <option value="other">Diğer</option>
                     </select>
 
@@ -100,10 +123,10 @@ export default function LedgerClient({ initialAccounts }: Props) {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {filteredAccounts.map(acc => (
-                            <tr key={acc.id} className="text-sm hover:bg-gray-50 transition-all group">
+                            <tr key={acc.id} className="text-sm hover:bg-gray-50 transition-all group cursor-pointer" onClick={() => setSelectedAccount(acc)}>
                                 <td className="px-8 py-4 font-mono font-bold text-amber-600">{acc.code}</td>
                                 <td className="px-8 py-4">
-                                    <div className="font-bold text-gray-900">{acc.name}</div>
+                                    <div className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors">{acc.name}</div>
                                 </td>
                                 <td className="px-8 py-4 text-gray-500 font-medium">{acc.currency}</td>
                                 <td className="px-8 py-4 text-right font-black">
@@ -112,12 +135,15 @@ export default function LedgerClient({ initialAccounts }: Props) {
                                     </span>
                                 </td>
                                 <td className="px-8 py-4 text-right">
-                                    <Link
-                                        href={`/admin/accounting/ledger/${acc.id}`}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold hover:bg-amber-600 hover:text-white transition-all"
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedAccount(acc);
+                                        }}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold hover:bg-amber-600 hover:text-white transition-all shadow-sm"
                                     >
                                         Ekstre Gör
-                                    </Link>
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -129,6 +155,16 @@ export default function LedgerClient({ initialAccounts }: Props) {
                     </tbody>
                 </table>
             </div>
+
+            {selectedAccount && (
+                <FinanceAccountDrawer
+                    account={selectedAccount}
+                    onClose={() => setSelectedAccount(null)}
+                />
+            )}
         </div>
     );
 }
+
+// Import Drawer at the top
+import FinanceAccountDrawer from '@/components/admin/accounting/finance-account-drawer';

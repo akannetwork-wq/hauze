@@ -2,6 +2,7 @@ import React from 'react';
 import GlobalSearch from '@/components/admin/global-search';
 import { getNotifications } from '@/app/actions/notifications';
 import Link from 'next/link';
+import { ShoppingBagIcon } from '@heroicons/react/24/outline';
 
 export default async function AdminHeaderFetcher() {
     const notifications = await getNotifications();
@@ -11,6 +12,9 @@ export default async function AdminHeaderFetcher() {
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 px-8 flex items-center justify-between sticky top-0 z-40">
             <GlobalSearch />
             <div className="flex items-center gap-6">
+                <Link href="?drawer=global-order" className="flex items-center gap-2">
+                    <ShoppingBagIcon className="w-6 h-6" /> Satış Yap
+                </Link>
                 <Link href="/admin/notifications" className="relative w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center text-xl hover:bg-indigo-50 transition-all hover:scale-105 active:scale-95">
                     🔔
                     {notificationCount > 0 && (

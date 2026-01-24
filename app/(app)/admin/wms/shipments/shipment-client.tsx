@@ -37,16 +37,13 @@ export default function ShipmentClient({ initialShipments }: Props) {
                     {shipments.map(s => (
                         <tr key={s.id} className="text-sm hover:bg-gray-50 transition-colors">
                             <td className="px-8 py-4 font-bold text-gray-900">
-                                #{s.order_id?.slice(0, 8)}
-                                <div className="text-[10px] text-gray-400 font-normal mt-0.5">
-                                    {s.orders?.total.toLocaleString('tr-TR')} {s.orders?.currency}
-                                </div>
+                                #{s.order_id?.slice(0, 8).toUpperCase()}
                             </td>
                             <td className="px-8 py-4">
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${s.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
-                                        s.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
-                                            s.status === 'picking' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-gray-100 text-gray-700'
+                                    s.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                                        s.status === 'picking' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-gray-100 text-gray-700'
                                     }`}>
                                     {s.status}
                                 </span>

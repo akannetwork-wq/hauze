@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { saveContact } from '@/app/actions/accounting';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -15,6 +15,10 @@ export default function CustomerClient({ initialCustomers }: Props) {
     const searchParams = useSearchParams();
     const [customers, setCustomers] = useState(initialCustomers);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setCustomers(initialCustomers);
+    }, [initialCustomers]);
 
     const [hasMore, setHasMore] = useState(initialCustomers.length === 50);
     const [page, setPage] = useState(1);

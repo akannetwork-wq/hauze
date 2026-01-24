@@ -11,7 +11,7 @@ export const getTenantByHostname = unstable_cache(
         const supabase = createServiceClient();
         const { data, error } = await supabase
             .from('tenants')
-            .select('id, name, config')
+            .select('id, name, hostname, config')
             .eq('hostname', hostname)
             .single();
 

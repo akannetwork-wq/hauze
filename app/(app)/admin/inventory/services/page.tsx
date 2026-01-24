@@ -1,38 +1,49 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
+import ServiceFetcher from './service-fetcher';
+import { getCategories } from '@/app/actions/inventory';
 
-export default function ServicesPlaceholderPage() {
+interface Props {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function ServiceListPage({ searchParams }: Props) {
+    const params = await searchParams;
+
+    // Fetch categories for services
+    const categories = await getCategories('service');
+
+    const fetchParams = {
+        search: params.q as string,
+        categoryId: params.category as string,
+        status: params.status as string,
+        sortBy: params.sort as string,
+        sortOrder: params.order as 'asc' | 'desc'
+    };
+
     return (
-        <div className="p-8 max-w-4xl mx-auto text-center space-y-8 mt-12">
-            <div className="space-y-4">
-                <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-sm">
-                    🛠️
+        <div className="p-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+                <div>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tighter uppercase">Hizmet Envanteri</h1>
+                    <p className="text-gray-400 text-sm font-medium mt-1">Müşterilere sunulan hizmetleri, varyasyonları ve akıllı fiyatlandırma kurallarını yönetin.</p>
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900">Hizmet Yönetimi</h1>
-                <p className="text-gray-500 max-w-lg mx-auto">
-                    İşçilik, montaj, nakliye ve servis gibi kalemlerinizi burada yönetebileceksiniz.
-                    Bu bölüm şu anda geliştirilme aşamasındadır.
-                </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
-                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                    <h3 className="font-bold text-gray-900 mb-1">⏰ İşçilik Takibi</h3>
-                    <p className="text-xs text-gray-500 leading-relaxed">Personel saatlik maliyetleri ve üretim sürelerini baz alan hesaplamalar.</p>
-                </div>
-                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                    <h3 className="font-bold text-gray-900 mb-1">🚛 Operasyonel Giderler</h3>
-                    <p className="text-xs text-gray-500 leading-relaxed">Nakliye ve dış hizmet giderlerinin ürün maliyetine yansıtılması.</p>
-                </div>
-            </div>
-
-            <div className="pt-8">
                 <Link
-                    href="/admin/inventory"
-                    className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-900 font-medium transition-colors"
+                    href="/admin/inventory/services/new"
+                    className="px-8 py-4 bg-emerald-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 hover:-translate-y-1 transition-all"
                 >
-                    ← Dashboard'a Dön
+                    + Yeni Hizmet Tanımla
                 </Link>
             </div>
+
+            <Suspense fallback={
+                <div className="bg-white rounded-[3rem] border border-gray-100 shadow-sm p-24 text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-[6px] border-emerald-600 border-t-transparent mx-auto mb-6"></div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Hizmet Verileri Çekiliyor...</div>
+                </div>
+            }>
+                <ServiceFetcher params={fetchParams} />
+            </Suspense>
         </div>
     );
 }

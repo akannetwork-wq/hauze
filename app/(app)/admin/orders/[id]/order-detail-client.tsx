@@ -27,20 +27,30 @@ export default function OrderDetailClient({ order }: Props) {
         setLoading(false);
     };
 
+    const isEmployee = !!order.employee_id;
+    const entity = order.contacts || order.employees;
+
     const handlePaymentUpdate = async () => {
         if (!confirm('Bu siparişi ödendi olarak işaretlemek ve cari hesaba tahsilat işlemek istediğinize emin misiniz?')) return;
 
         setLoading(true);
-        // Default to 'eft' as the closing method if it was originally EFT, 
-        // or just use 'eft' as the standard confirmed method.
-        const res = await markOrderAsPaid(order.id, 'eft');
-        if (res.success) {
-            setPaymentStatus('paid');
-            toast.success('Ödeme kaydedildi ve cari hesap kapatıldı.');
-        } else {
-            toast.error('Hata: ' + res.error);
+        try {
+            // Default to 'eft' as the closing method if it was originally EFT, 
+            // or just use 'eft' as the standard confirmed method.
+            const res = await markOrderAsPaid(order.id, 'eft');
+            console.log('Payment result:', res);
+            if (res.success) {
+                setPaymentStatus('paid');
+                toast.success('Ödeme kaydedildi ve cari hesap kapatıldı.');
+            } else {
+                toast.error('Hata: ' + ((res as any).error || (res as any).message || 'Bilinmeyen hata'));
+            }
+        } catch (err: any) {
+            console.error('Payment error:', err);
+            toast.error('Ödeme hatası: ' + (err?.message || 'Beklenmeyen bir hata oluştu'));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
@@ -54,7 +64,7 @@ export default function OrderDetailClient({ order }: Props) {
                             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Sipariş #{order.id.slice(0, 8).toUpperCase()}</h1>
                             <OrderStatusBadge status={status} />
                         </div>
-                        <p className="text-gray-500 mt-1">{new Date(order.created_at).toLocaleString('tr-TR')} • {order.type === 'sale' ? 'Satış Siparişi' : 'Alın Siparişi'}</p>
+                        <p className="text-gray-500 mt-1">{new Date(order.created_at).toLocaleString('tr-TR')} • {order.type === 'sale' ? 'Satış Siparişi' : order.type === 'service' ? 'Yeni İş (Hizmet)' : 'Alım Siparişi'}</p>
                     </div>
                 </div>
 
@@ -135,7 +145,7 @@ export default function OrderDetailClient({ order }: Props) {
                                                 <div className="text-[10px] text-gray-400 font-mono mt-0.5">{line.sku}</div>
                                             </td>
                                             <td className="px-8 py-6 text-center text-sm font-medium text-gray-600">
-                                                {line.price.toLocaleString('tr-TR', { style: 'currency', currency: order.currency || 'TRY' })}
+                                                {(Number(line.price) || 0).toLocaleString('tr-TR', { style: 'currency', currency: order.currency || 'TRY' })}
                                             </td>
                                             <td className="px-8 py-6 text-center">
                                                 <span className="inline-flex px-3 py-1 bg-gray-100 rounded-lg text-xs font-black text-gray-900">
@@ -143,7 +153,7 @@ export default function OrderDetailClient({ order }: Props) {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-6 text-right font-black text-gray-900">
-                                                {(line.quantity * line.price).toLocaleString('tr-TR', { style: 'currency', currency: order.currency || 'TRY' })}
+                                                {((Number(line.quantity) || 1) * (Number(line.price) || 0)).toLocaleString('tr-TR', { style: 'currency', currency: order.currency || 'TRY' })}
                                             </td>
                                         </tr>
                                     ))}
@@ -239,40 +249,51 @@ export default function OrderDetailClient({ order }: Props) {
                     <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
                         <div className="p-8 border-b border-gray-50 bg-gray-50/30">
                             <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest flex items-center gap-2">
-                                <span>👤</span> Müşteri Bilgileri
+                                <span>👤</span> {isEmployee ? 'Personel Bilgileri' : 'Müşteri Bilgileri'}
                             </h3>
                         </div>
                         <div className="p-8 space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl flex items-center justify-center text-2xl">👤</div>
+                                <div className={`w-14 h-14 bg-gradient-to-br ${isEmployee ? 'from-orange-50 to-orange-100' : 'from-indigo-50 to-indigo-100'} rounded-2xl flex items-center justify-center text-2xl`}>👤</div>
                                 <div>
-                                    <Link href={`/admin/accounting/customers/${order.contacts?.id}`} className="text-lg font-black text-gray-900 leading-tight">
-                                        {order.contacts?.first_name} {order.contacts?.last_name}
+                                    <Link
+                                        href={isEmployee
+                                            ? `/admin/personnel/employees?drawer=edit-employee&id=${entity?.id}`
+                                            : `/admin/accounting/customers?drawer=contact-detail&id=${entity?.id}`}
+                                        className="text-lg font-black text-gray-900 leading-tight hover:text-indigo-600 transition-colors"
+                                    >
+                                        {entity?.first_name} {entity?.last_name}
                                     </Link>
-                                    <div className="text-sm font-medium text-indigo-600 mt-0.5">{order.contacts?.company_name}</div>
+                                    <div className={`text-sm font-medium mt-0.5 ${isEmployee ? 'text-orange-600' : 'text-indigo-600'}`}>
+                                        {entity?.company_name || (isEmployee ? 'Personel' : 'Bireysel')}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-gray-50">
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">E-Posta</span>
-                                    <span className="text-gray-900 font-medium">{order.contacts?.email || '-'}</span>
+                                    <span className="text-gray-900 font-medium">{entity?.email || '-'}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Telefon</span>
-                                    <span className="text-gray-900 font-medium">{order.contacts?.phone || '-'}</span>
+                                    <span className="text-gray-900 font-medium">{entity?.phone || '-'}</span>
                                 </div>
-                                <div className="flex justify-between items-start text-sm pt-2">
-                                    <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Adres</span>
-                                    <span className="text-gray-900 font-medium text-right max-w-[150px]">{order.contacts?.address || '-'}</span>
-                                </div>
+                                {!isEmployee && (
+                                    <div className="flex justify-between items-start text-sm pt-2">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Adres</span>
+                                        <span className="text-gray-900 font-medium text-right max-w-[150px]">{entity?.address || '-'}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <a
-                                href={`/admin/accounting/customers/${order.contact_id}`}
+                                href={isEmployee
+                                    ? `/admin/personnel/employees?drawer=edit-employee&id=${entity?.id}`
+                                    : `/admin/accounting/customers?drawer=contact-detail&id=${entity?.id}`}
                                 className="block w-full text-center py-4 bg-gray-50 text-gray-600 font-black text-xs rounded-2xl hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200"
                             >
-                                Müşteri Kartını Görüntüle
+                                {isEmployee ? 'Personel Kartını Görüntüle' : 'Müşteri Kartını Görüntüle'}
                             </a>
                         </div>
                     </div>

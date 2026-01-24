@@ -1,64 +1,110 @@
 import Link from 'next/link';
 import { getAccountingSummary } from '@/app/actions/accounting';
 
+import AccountingActions from './components/accounting-actions';
+
 export default async function AccountingContent() {
     const summary = await getAccountingSummary();
 
     return (
         <div className="animate-in fade-in duration-700">
+            {/* Actions */}
+            <AccountingActions />
+
             {/* Financial Summary Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-indigo-100">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <Link href="/admin/accounting/customers" className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-indigo-100">
                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Toplam Alacak</div>
-                    <div className="text-2xl font-black text-indigo-600">{summary.totalReceivables.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
-                </div>
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-red-100">
+                    <div className="text-2xl font-black text-indigo-600 text-right">{summary.totalReceivables.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
+                </Link>
+                <Link href="/admin/accounting/suppliers" className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-red-100">
                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Toplam Borç</div>
-                    <div className="text-2xl font-black text-red-600">{summary.totalPayables.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
-                </div>
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-emerald-100">
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Kasa Durumu</div>
-                    <div className="text-2xl font-black text-emerald-600">{summary.totalCash.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
-                </div>
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-gray-200 bg-gray-50/30">
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Net Durum</div>
-                    <div className="text-2xl font-black text-gray-900 border-t border-gray-100 pt-1 mt-1">{(summary.totalReceivables - summary.totalPayables + summary.totalCash).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
+                    <div className="text-2xl font-black text-red-600 text-right">{summary.totalPayables.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
+                </Link>
+                <Link href="/admin/personnel/employees" className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-orange-100">
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Personel Ödemeleri</div>
+                    <div className="text-2xl font-black text-orange-600 text-right">{(summary.totalPersonnelPayable || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
+                </Link>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-lg hover:border-blue-100 bg-blue-50/10">
+                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Net Finansal Değer (Equity)</div>
+                    <div className="text-2xl font-black text-blue-600 text-right">{summary.netBalance?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL</div>
+                    <div className="text-[9px] text-gray-400 text-right font-bold mt-1">Varlık + Alacak - Tüm Borçlar</div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                {/* Customers Card */}
-                <Link href="/admin/accounting/customers" className="group bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300">
-                    <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
+            {/* Detailed Assets Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
+                {/* Cash */}
+                <Link href="/admin/accounting/safes" className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-emerald-100 transition-all group">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        </div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kasa</div>
                     </div>
-                    <h3 className="text-lg font-black text-gray-900">Müşteriler</h3>
-                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">Satış yaptığınız kişi ve kurumların cari hesaplarını takip edin.</p>
+                    <div className="text-xl font-black text-gray-900">{summary.totalCash.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} TL</div>
                 </Link>
 
-                {/* Suppliers Card */}
-                <Link href="/admin/accounting/suppliers" className="group bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300">
-                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
+                {/* Bank */}
+                <Link href="/admin/accounting/banks" className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-blue-100 transition-all group">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        </div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Banka + KMH</div>
                     </div>
-                    <h3 className="text-lg font-black text-gray-900">Tedarikçiler</h3>
-                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">Mal ve hizmet aldığınız firmaların ödemelerini ve borçlarını yönetin.</p>
+                    <div className="text-xl font-black text-gray-900">{summary.totalBankAvailable?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} TL</div>
+                    <div className="flex justify-between mt-2 text-[9px] font-bold text-gray-400 border-t border-gray-50 pt-2">
+                        <span>Net: {summary.totalBank?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                        <span className="text-blue-500">KMH: {summary.totalBankKMH?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                    </div>
                 </Link>
 
-                {/* General Ledger Card */}
-                <Link href="/admin/accounting/ledger" className="group bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300">
-                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-4 group-hover:scale-110 transition-transform">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
+                {/* Credit Cards (Available) */}
+                <Link href="/admin/accounting/credit-cards" className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-purple-100 transition-all group">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        </div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kart Limiti</div>
                     </div>
-                    <h3 className="text-lg font-black text-gray-900">Kasa & Banka</h3>
-                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">Nakit ve banka hesaplarınızdaki para hareketlerini izleyin.</p>
+                    <div className="text-xl font-black text-gray-900">{summary.totalCreditCardsAvailable?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} TL</div>
+                    <div className="flex justify-between mt-2 text-[9px] font-bold text-gray-400 border-t border-gray-50 pt-2">
+                        <span>L: {summary.totalCreditCardsLimit?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                        <span className="text-red-500">B: -{summary.totalCreditCards?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                    </div>
                 </Link>
+
+                {/* POS */}
+                <Link href="/admin/accounting/definitions" className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-cyan-100 transition-all group">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        </div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">POS Hesapları</div>
+                    </div>
+                    <div className="text-xl font-black text-gray-900">{summary.totalPos.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} TL</div>
+                </Link>
+
+                {/* Checks */}
+                <Link href="/admin/accounting/checks" className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-amber-100 transition-all group">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
+                        </div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Çek Portföyü</div>
+                    </div>
+                    <div className="text-xl font-black text-gray-900">{summary.totalChecks.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} TL</div>
+                </Link>
+
+                {/* Purchasing Power / Liquidity Info */}
+                <div className="bg-indigo-600 p-5 rounded-2xl shadow-xl shadow-indigo-100 flex flex-col justify-center">
+                    <div className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Toplam Alım Gücü (Likidite)</div>
+                    <div className="text-xl font-black text-white">
+                        {summary.availableLiquidity?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} TL
+                    </div>
+                    <div className="text-[8px] text-indigo-200 font-bold mt-1">Nakit + KMH + Kart Limitleri</div>
+                </div>
             </div>
 
             {/* Active Contacts this Month */}

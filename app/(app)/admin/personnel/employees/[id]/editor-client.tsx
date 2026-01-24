@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveEmployee, addPersonnelTransaction } from '@/app/actions/personnel';
+import { saveEmployee, addPersonnelTransaction, deletePersonnelTransaction } from '@/app/actions/personnel';
+import { createUser } from '@/app/actions/users';
 import Link from 'next/link';
+import { KeyIcon, CheckCircleIcon, GlobeAltIcon, UserCircleIcon } from '@heroicons/react/24/solid';
+import { toast } from 'react-hot-toast';
 
 interface Props {
     initialData: any | null;
@@ -28,6 +31,11 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
     });
 
     const [showTransactionModal, setShowTransactionModal] = useState(false);
+    const [showPortalModal, setShowPortalModal] = useState(false);
+    const [portalData, setPortalData] = useState({
+        email: initialData?.email || '',
+        password: ''
+    });
     const [transaction, setTransaction] = useState({
         type: 'advance',
         amount: '',
@@ -49,16 +57,14 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
 
         if (result.success) {
             if (isDrawer) {
-                // If in drawer, we just close it by removing the param from URL without a full reload
+                // If in drawer, close it properly via router to ensure state sync
                 const url = new URL(window.location.href);
                 url.searchParams.delete('drawer');
                 url.searchParams.delete('id');
-                window.history.pushState({}, '', url.toString());
-                // Trigger a refresh of the list underneath
-                router.refresh();
 
-                // Also need to manually close by triggering any state that Drawer uses if not just URL
-                // But since our DrawerManager uses searchParams, this is enough.
+                // Use router.push to update URL and then refresh to re-fetch data
+                router.push(url.pathname + '?' + url.searchParams.toString(), { scroll: false });
+                router.refresh();
             } else {
                 router.push('/admin/personnel/employees');
                 router.refresh();
@@ -98,8 +104,42 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
 
     const balance = Number(initialData?.personnel_balances?.[0]?.balance || 0);
 
+    async function handleDeleteTransaction(id: string) {
+        if (!confirm('Bu işlemi silmek istediğinizden emin misiniz?')) return;
+
+        setLoading(true);
+        const result = await deletePersonnelTransaction(id);
+        setLoading(false);
+
+        if (result.success) {
+            router.refresh();
+        } else {
+            alert(result.error || 'İşlem silinirken bir hata oluştu.');
+        }
+    }
+
+    async function handleCreatePortalAccount() {
+        if (!portalData.email || !portalData.password) {
+            toast.error('E-posta ve şifre zorunludur.');
+            return;
+        }
+
+        setLoading(true);
+        const result = await createUser(portalData.email, portalData.password, 'user', initialData.id);
+        setLoading(false);
+
+        if (result.success) {
+            toast.success('Personel portal hesabı oluşturuldu.');
+            setShowPortalModal(false);
+            router.refresh();
+        } else {
+            toast.error('Hata: ' + result.error);
+        }
+    }
+
     return (
         <div className={`space-y-8 ${isDrawer ? 'pb-32' : ''}`}>
+
             {!isDrawer && (
                 <div className="flex justify-between items-center">
                     <div>
@@ -115,23 +155,24 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
                         </h1>
                     </div>
                 </div>
+
             )}
 
-            {/* Save Button for Drawer (Sticky bottom) */}
-            {isDrawer && (
-                <div className="fixed bottom-0 left-0 right-0 p-8 bg-white/80 backdrop-blur-md border-t border-gray-100 z-50 flex justify-end">
-                    <button
-                        onClick={handleSave}
-                        disabled={loading}
-                        className="bg-indigo-600 text-white px-10 py-4 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50"
-                    >
-                        {loading ? 'KAYDEDİLİYOR...' : 'DEĞİŞİKLİKLERİ KAYDET'}
-                    </button>
+            {!isNew && (
+                <div className={`p-8 rounded-3xl border shadow-sm flex flex-col items-center text-center ${balance >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                    <div className="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Güncel Bakiye</div>
+                    <div className={`text-3xl font-black ${balance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(balance)}
+                    </div>
+                    <div className="text-[10px] font-bold mt-2 uppercase tracking-tighter opacity-50">
+                        {balance >= 0 ? 'Personel Alacaklı' : 'Personel Borçlu (Avans)'}
+                    </div>
                 </div>
             )}
 
+
             {!isDrawer && (
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end mb-4 gap-3">
                     <button
                         onClick={handleSave}
                         disabled={loading}
@@ -143,8 +184,69 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
             )}
 
             <div className={`grid grid-cols-1 ${isDrawer ? '' : 'lg:grid-cols-3'} gap-8`}>
+
                 {/* Sol Kolon: Bilgiler */}
                 <div className={`${isDrawer ? '' : 'lg:col-span-2'} space-y-6`}>
+
+
+                    {!isNew && (
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center text-left">
+                                <h3 className="font-bold text-gray-900 text-lg">Finansal Geçmiş (Ledger)</h3>
+                                <button
+                                    onClick={() => setShowTransactionModal(true)}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
+                                >
+                                    + Ödeme / İşlem Ekle
+                                </button>
+                            </div>
+                            <div className="overflow-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-50/50">
+                                        <tr>
+                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px]">Tarih</th>
+                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px]">Tür</th>
+                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px]">Açıklama</th>
+                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px] text-right">Tutar</th>
+                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px] text-right"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {ledger.map((tx: any) => (
+                                            <tr key={tx.id}>
+                                                <td className="px-6 py-4 text-gray-500">{tx.date}</td>
+                                                <td className="px-6 py-4 font-medium capitalize">{tx.type}</td>
+                                                <td className="px-6 py-4 text-gray-400">{tx.description || '-'}</td>
+                                                <td className={`px-6 py-4 text-right font-bold ${['earning', 'bonus', 'payment'].includes(tx.type) ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {['earning', 'bonus', 'payment'].includes(tx.type) ? '+' : '-'}{new Intl.NumberFormat('tr-TR').format(tx.amount)} TL
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {tx.source !== 'financial' && (
+                                                        <button
+                                                            onClick={() => handleDeleteTransaction(tx.id)}
+                                                            className="text-gray-300 hover:text-rose-600 transition-colors"
+                                                            title="Sil"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {ledger.length === 0 && (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">Henüz bir finansal işlem kaydı yok.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+
                     <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -204,63 +306,11 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
                         </div>
                     </div>
 
-                    {!isNew && (
-                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center text-left">
-                                <h3 className="font-bold text-gray-900 text-lg">Finansal Geçmiş (Ledger)</h3>
-                                <button
-                                    onClick={() => setShowTransactionModal(true)}
-                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
-                                >
-                                    + Ödeme / İşlem Ekle
-                                </button>
-                            </div>
-                            <div className="overflow-auto max-h-[400px]">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-gray-50/50">
-                                        <tr>
-                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px]">Tarih</th>
-                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px]">Tür</th>
-                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px]">Açıklama</th>
-                                            <th className="px-6 py-3 font-bold text-gray-400 uppercase text-[10px] text-right">Tutar</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {ledger.map((tx: any) => (
-                                            <tr key={tx.id}>
-                                                <td className="px-6 py-4 text-gray-500">{tx.date}</td>
-                                                <td className="px-6 py-4 font-medium capitalize">{tx.type}</td>
-                                                <td className="px-6 py-4 text-gray-400">{tx.description || '-'}</td>
-                                                <td className={`px-6 py-4 text-right font-bold ${['earning', 'bonus'].includes(tx.type) ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                    {['earning', 'bonus'].includes(tx.type) ? '+' : '-'}{new Intl.NumberFormat('tr-TR').format(tx.amount)} TL
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {ledger.length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">Henüz bir finansal işlem kaydı yok.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
+
                 </div>
 
                 {/* Sağ Kolon: Finansal Ayarlar */}
                 <div className="space-y-6">
-                    {!isNew && (
-                        <div className={`p-8 rounded-3xl border shadow-sm flex flex-col items-center text-center ${balance >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-                            <div className="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Güncel Bakiye</div>
-                            <div className={`text-3xl font-black ${balance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(balance)}
-                            </div>
-                            <div className="text-[10px] font-bold mt-2 uppercase tracking-tighter opacity-50">
-                                {balance >= 0 ? 'Personel Alacaklı' : 'Personel Borçlu (Avans)'}
-                            </div>
-                        </div>
-                    )}
 
                     <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
                         <div className="text-left">
@@ -318,6 +368,34 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
                                 className="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                             />
                         </div>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                        <div className="flex items-center gap-3 mb-2">
+                            <GlobeAltIcon className="w-5 h-5 text-indigo-600" />
+                            <h3 className="font-bold text-gray-900">Portal Erişimi</h3>
+                        </div>
+
+                        {initialData?.user_id ? (
+                            <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 space-y-3">
+                                <div className="flex items-center gap-2 text-emerald-700 font-extrabold text-xs uppercase tracking-widest">
+                                    <CheckCircleIcon className="w-4 h-4" /> AKTİF BAĞLANTI
+                                </div>
+                                <div className="text-[10px] text-emerald-600 font-bold opacity-70 text-left">
+                                    Bu personel kendi portallarına giriş yapabilir.
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                                <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest text-left">HESAP BAĞLI DEĞİL</div>
+                                <p className="text-[11px] text-gray-500 font-medium text-left">Bu personelin henüz bir portal hesabı yok.</p>
+                                <button
+                                    onClick={() => setShowPortalModal(true)}
+                                    className="w-full bg-gray-900 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                                >
+                                    PORTAL HESABI OLUŞTUR
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -386,6 +464,64 @@ export default function EmployeeEditorClient({ initialData, ledger = [], isDrawe
                     </div>
                 </div>
             )}
+
+            {/* Save Button for Drawer (Sticky bottom) */}
+            {isDrawer && (
+                <div className="right-0 p-8 z-50 flex justify-end">
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50"
+                    >
+                        {loading ? 'KAYDEDİLİYOR...' : 'KAYDET'}
+                    </button>
+                </div>
+            )}
+
+            {/* Portal Kayıt Modal */}
+            {showPortalModal && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                        <button onClick={() => setShowPortalModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-900">✕</button>
+                        <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-6">
+                            <UserCircleIcon className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-xl font-black text-gray-900 mb-2 text-left">Portal Hesabı Oluştur</h3>
+                        <p className="text-gray-400 text-xs font-medium mb-8 text-left">Personel bu bilgilerle kendi paneline giriş yapacaktır.</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 pl-1">E-Posta</label>
+                                <input
+                                    type="email"
+                                    value={portalData.email}
+                                    onChange={e => setPortalData({ ...portalData, email: e.target.value })}
+                                    className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm"
+                                    placeholder="ornek@sirket.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 pl-1">Şifre Belirle</label>
+                                <input
+                                    type="password"
+                                    value={portalData.password}
+                                    onChange={e => setPortalData({ ...portalData, password: e.target.value })}
+                                    className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            <button
+                                onClick={handleCreatePortalAccount}
+                                disabled={loading}
+                                className="w-full bg-indigo-600 text-white font-black py-5 rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 mt-4"
+                            >
+                                {loading ? 'İŞLENİYOR...' : 'HESABI OLUŞTUR VE BAĞLA'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

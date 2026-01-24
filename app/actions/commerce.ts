@@ -52,6 +52,7 @@ export async function createPrice(formData: FormData) {
 
     revalidatePath('/admin/inventory');
     revalidatePath('/admin/accounting');
+    revalidatePath('/admin/orders/new/service');
     return { success: true };
 }
 

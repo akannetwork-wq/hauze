@@ -192,7 +192,7 @@ export async function getProducts(options: {
     }
 
     if (products && products.length > 0) {
-        const skus = products.map(p => p.sku);
+        const skus = products.map(p => p.sku).filter(Boolean);
         const { data: prices } = await supabase
             .from('prices')
             .select('*')
@@ -201,7 +201,7 @@ export async function getProducts(options: {
 
         return products.map(p => ({
             ...p,
-            prices: prices?.filter(pr => pr.sku === p.sku) || []
+            prices: prices?.filter(pr => pr.sku?.toLowerCase() === p.sku?.toLowerCase()) || []
         })) as Product[];
     }
 
@@ -230,12 +230,21 @@ export async function getProduct(id: string) {
     }
 
     const product = data as any;
+
+    // Fetch prices for this SKU
+    const { data: prices } = await supabase
+        .from('prices')
+        .select('*')
+        .eq('sku', product.sku)
+        .eq('tenant_id', tenant.id);
+
     return {
         ...product,
         category: product.category_info ? { name: product.category_info.name } : null,
         category_ids: product.category_rels?.map((r: any) => r.category_id) || [],
         variants: product.variants || [],
-        digital_meta: product.digital_meta?.[0] || null // select() return array for joins
+        digital_meta: product.digital_meta?.[0] || null, // select() return array for joins
+        prices: prices || []
     } as Product;
 }
 
@@ -250,6 +259,7 @@ export async function saveProduct(product: Partial<Product>) {
         variants,
         digital_meta,
         price,
+        prices,
         inventory,
         category_ids,
         ...dbProduct
@@ -390,6 +400,8 @@ export async function saveProduct(product: Partial<Product>) {
     }
 
     revalidatePath('/admin/inventory');
+    revalidatePath('/admin/inventory/services');
+    revalidatePath('/admin/orders/new/service');
 
     // Return full data so frontend has IDs
     const finalProduct = await getProduct(savedProduct.id);

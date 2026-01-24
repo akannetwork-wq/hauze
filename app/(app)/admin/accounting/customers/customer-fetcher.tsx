@@ -1,8 +1,8 @@
 import { getContacts } from '@/app/actions/accounting';
-import CustomerClient from './customer-client';
+import ContactList from '@/components/admin/contacts/contact-list';
 
 export default async function CustomerFetcher() {
     // Heavy DB Fetch
     const customers = await getContacts('customer');
-    return <CustomerClient initialCustomers={customers} />;
+    return <ContactList initialContacts={customers} type="customer" />;
 }

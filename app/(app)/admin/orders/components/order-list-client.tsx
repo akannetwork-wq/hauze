@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import OrderStatusBadge from './order-status-badge';
 import OrderDialog from './order-dialog';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Props {
     initialOrders: any[];
@@ -14,14 +14,35 @@ type TabType = 'all' | 'pending' | 'preparing' | 'in_progress' | 'completed' | '
 export default function OrderListClient({ initialOrders }: Props) {
     const router = useRouter();
     const [orders, setOrders] = useState(initialOrders);
+
+    useEffect(() => {
+        setOrders(initialOrders);
+    }, [initialOrders]);
+
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<TabType>('all');
     const [sortBy, setSortBy] = useState<'date' | 'amount' | 'name'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+    // Type filter (Url synced)
+    const searchParams = useSearchParams();
+    const typeFilter = (searchParams.get('type') as 'sale' | 'purchase' | 'all') || 'all';
+
+    const setTypeFilter = (val: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (val === 'all') params.delete('type');
+        else params.set('type', val);
+        router.push('?' + params.toString(), { scroll: false });
+    };
+
     const filteredAndSortedOrders = useMemo(() => {
         let result = [...orders];
+
+        // 0. Type Filter
+        if (typeFilter !== 'all') {
+            result = result.filter(o => o.type === typeFilter);
+        }
 
         // 1. Search Filter
         if (searchQuery) {
@@ -29,7 +50,7 @@ export default function OrderListClient({ initialOrders }: Props) {
             result = result.filter(o => {
                 const orderIdMatch = o.id.toLowerCase().includes(query);
                 const orderNumMatch = o.order_number?.toLowerCase().includes(query);
-                const contactName = (o.contacts?.company_name || `${o.contacts?.first_name} ${o.contacts?.last_name}`).toLowerCase();
+                const contactName = (o.employees ? `${o.employees.first_name} ${o.employees.last_name}` : (o.contacts?.company_name || `${o.contacts?.first_name} ${o.contacts?.last_name || ''}`)).toLowerCase();
                 return orderIdMatch || orderNumMatch || contactName.includes(query);
             });
         }
@@ -85,16 +106,36 @@ export default function OrderListClient({ initialOrders }: Props) {
     return (
         <div className="space-y-6">
             {/* Filters & Search */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-end">
+                <div className="w-full md:w-96 relative">
+                    <input
+                        type="text"
+                        placeholder="Sipariş no veya isim ile ara..."
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-sm text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none shadow-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                </div>
 
-            <div className="w-full md:w-96 relative">
-                <input
-                    type="text"
-                    placeholder="Sipariş no veya isim ile ara..."
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-sm text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none shadow-sm"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200">
+                    <button
+                        onClick={() => setTypeFilter('all')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${typeFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >TÜMÜ</button>
+                    <button
+                        onClick={() => setTypeFilter('sale')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${typeFilter === 'sale' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'text-gray-400 hover:text-emerald-600'}`}
+                    >SATIŞLAR</button>
+                    <button
+                        onClick={() => setTypeFilter('purchase')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${typeFilter === 'purchase' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-400 hover:text-indigo-600'}`}
+                    >ALIMLAR</button>
+                    <button
+                        onClick={() => setTypeFilter('service')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${typeFilter === 'service' ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'text-gray-400 hover:text-amber-600'}`}
+                    >HİZMETLER</button>
+                </div>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
@@ -163,12 +204,25 @@ export default function OrderListClient({ initialOrders }: Props) {
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3">
                                             <div className="text-sm font-black text-gray-900 font-mono">#{order.id.slice(0, 8).toUpperCase()}</div>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${order.type === 'sale'
+                                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                : order.type === 'service'
+                                                    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                                    : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                                }`}>
+                                                {order.type === 'sale' ? 'SATIŞ' : order.type === 'service' ? 'HİZMET' : 'ALIM'}
+                                            </span>
                                         </div>
                                     </td>
                                     <td className="px-8 py-6">
-                                        <div className="text-sm font-bold text-gray-900">
-                                            {order.contacts?.company_name || `${order.contacts?.first_name} ${order.contacts?.last_name}`}
+                                        <div className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                            {order.employees
+                                                ? `${order.employees.first_name} ${order.employees.last_name}`
+                                                : (order.contacts?.company_name || `${order.contacts?.first_name} ${order.contacts?.last_name || ''}` || 'Bilinmeyen Müşteri')}
                                         </div>
+                                        {order.employees && (
+                                            <div className="text-[10px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 inline-block px-1 rounded mt-1">PERSONEL</div>
+                                        )}
                                     </td>
                                     <td className="px-8 py-6 text-sm text-gray-500 font-medium">
                                         {new Date(order.created_at).toLocaleDateString('tr-TR')}

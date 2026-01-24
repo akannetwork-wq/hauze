@@ -40,9 +40,8 @@ export default function PersonnelDrawer({ id }: Props) {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center p-12 gap-4">
+            <div className="flex flex-col h-[calc(100vh-4rem)] w-full items-center justify-center p-12 gap-4">
                 <div className="w-12 h-12 border-4 border-indigo-50 border-t-indigo-500 rounded-full animate-spin"></div>
-                <p className="font-black uppercase tracking-widest text-[10px] text-gray-400">Veriler Yükleniyor...</p>
             </div>
         );
     }

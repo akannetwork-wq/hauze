@@ -255,10 +255,10 @@ export async function getWmsSummary() {
         // Low stock alerts (example: less than 10 in any location)
         const { data: lowStock } = await supabase
             .from('wms_stock')
-            .select('*, products(title), warehouse_locations(name)')
+            .select('*, products(title, sku), warehouse_locations(name)')
             .eq('tenant_id', tenant.id)
             .lt('quantity_on_hand', 10)
-            .limit(5);
+            .limit(10);
 
         // Orders to prepare (pending or preparing)
         const { data: ordersToPrepare } = await supabase
@@ -270,19 +270,147 @@ export async function getWmsSummary() {
             .order('created_at', { ascending: true })
             .limit(5);
 
+        // Orders to receive (pending purchase)
+        const { data: ordersToReceive } = await supabase
+            .from('orders')
+            .select('*, contacts(company_name, first_name, last_name)')
+            .eq('tenant_id', tenant.id)
+            .eq('type', 'purchase')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true })
+            .limit(5);
+
         return {
             stats: {
                 warehouses: warehouses || 0,
                 movements: movements || 0,
-                pendingOrders: ordersToPrepare?.length || 0
+                pendingPicking: ordersToPrepare?.length || 0,
+                pendingReceiving: ordersToReceive?.length || 0,
+                lowStockCount: lowStock?.length || 0
             },
             recentMovements: recentMovements || [],
             lowStock: lowStock || [],
-            ordersToPrepare: ordersToPrepare || []
+            ordersToPrepare: ordersToPrepare || [],
+            ordersToReceive: ordersToReceive || []
         };
     } catch (error) {
         console.error('getWmsSummary Error:', error);
-        return { stats: { warehouses: 0, movements: 0, activeLocations: 0 }, recentMovements: [], lowStock: [] };
+        return { stats: { warehouses: 0, movements: 0, lowStockCount: 0 }, recentMovements: [], lowStock: [], ordersToPrepare: [], ordersToReceive: [] };
+    }
+}
+
+export async function getOrdersForWarehouse(type: 'sale' | 'purchase') {
+    try {
+        const { supabase, tenant } = await getAuthenticatedClient();
+        let query = supabase
+            .from('orders')
+            .select('*, contacts(company_name, first_name, last_name), warehouse:warehouse_id(name, key)')
+            .eq('tenant_id', tenant.id)
+            .eq('type', type);
+
+        if (type === 'sale') {
+            query = query.in('status', ['pending', 'preparing', 'ready']);
+        } else {
+            query = query.eq('status', 'pending');
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: true });
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('getOrdersForWarehouse Error:', error);
+        return [];
+    }
+}
+
+export async function processWmsAction(orderId: string, action: 'pick' | 'ship' | 'receive', details: any = {}) {
+    try {
+        const { supabase, tenant } = await getAuthenticatedClient();
+        const { updateOrderStatus } = await import('./orders');
+
+        if (action === 'pick') {
+            return await updateOrderStatus(orderId, 'preparing');
+        }
+
+        if (action === 'receive') {
+            return await updateOrderStatus(orderId, 'delivered');
+        }
+
+        if (action === 'ship') {
+            // 1. Create shipment record
+            const { error: shipError } = await supabase
+                .from('wms_shipments')
+                .insert({
+                    tenant_id: tenant.id,
+                    order_id: orderId,
+                    carrier: details.carrier,
+                    tracking_number: details.trackingNumber,
+                    status: 'shipped'
+                });
+
+            if (shipError) throw shipError;
+
+            // 2. Update order status
+            return await updateOrderStatus(orderId, 'shipped');
+        }
+
+        return { success: false, error: 'Geçersiz aksiyon.' };
+    } catch (error: any) {
+        console.error('processWmsAction Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getStockAuditList(warehouseId?: string) {
+    try {
+        const { supabase, tenant } = await getAuthenticatedClient();
+        let query = supabase
+            .from('wms_stock')
+            .select('*, products(title, sku), warehouse_locations(name, pool_id)')
+            .eq('tenant_id', tenant.id);
+
+        if (warehouseId) query = query.eq('warehouse_locations.pool_id', warehouseId);
+
+        const { data, error } = await query.order('product_id');
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('getStockAuditList Error:', error);
+        return [];
+    }
+}
+
+export async function saveStockAudit(auditData: { product_id: string, location_id: string, actual_quantity: number, reason?: string }[]) {
+    try {
+        const { supabase, tenant } = await getAuthenticatedClient();
+
+        for (const item of auditData) {
+            const { data: current } = await supabase
+                .from('wms_stock')
+                .select('quantity_on_hand')
+                .eq('product_id', item.product_id)
+                .eq('location_id', item.location_id)
+                .single();
+
+            const delta = item.actual_quantity - (current?.quantity_on_hand || 0);
+
+            if (delta !== 0) {
+                await recordMovement({
+                    product_id: item.product_id,
+                    type: 'ADJUSTMENT',
+                    quantity: Math.abs(delta),
+                    to_location_id: delta > 0 ? item.location_id : undefined,
+                    from_location_id: delta < 0 ? item.location_id : undefined,
+                    description: `Sayım Farkı: ${item.reason || 'Düzenleme'}`
+                });
+            }
+        }
+
+        revalidatePath('/admin/wms');
+        return { success: true };
+    } catch (error: any) {
+        console.error('saveStockAudit Error:', error);
+        return { success: false, error: error.message };
     }
 }
 
@@ -291,7 +419,7 @@ export async function getShipments() {
         const { supabase, tenant } = await getAuthenticatedClient();
         const { data, error } = await supabase
             .from('wms_shipments')
-            .select('*, orders(id, total, currency)')
+            .select('*, orders(id)')
             .eq('tenant_id', tenant.id)
             .order('created_at', { ascending: false });
 

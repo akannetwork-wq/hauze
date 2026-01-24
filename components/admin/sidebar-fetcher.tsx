@@ -1,19 +1,19 @@
 import React from 'react';
-import { getCurrentContext } from '@/app/actions/tenant-context';
 import { getNotifications } from '@/app/actions/notifications';
+import { getAuthenticatedClient } from '@/app/actions/auth-helper';
 import Sidebar from '@/components/admin/sidebar';
 
 export default async function AdminSidebarFetcher() {
-    const context = await getCurrentContext();
+    const { tenant, modules, role, permissions } = await getAuthenticatedClient();
     const notifications = await getNotifications();
-
-    if (!context) return null;
 
     return (
         <Sidebar
-            tenantName={context.tenant.name}
+            tenantName={tenant.name}
             notificationCount={notifications.length}
-            modules={context.modules}
+            modules={modules}
+            userRole={role}
+            userPermissions={permissions}
         />
     );
 }

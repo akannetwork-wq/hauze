@@ -14,6 +14,18 @@ const ContactDrawer = dynamic(() => import('@/app/(app)/admin/accounting/compone
     loading: () => <PlaceholderContent text="Cari Bilgileri" />
 });
 
+const GlobalOrderDrawer = dynamic(() => import('@/app/(app)/admin/orders/components/global-order-drawer'), {
+    loading: () => <PlaceholderContent text="Satış Ekranı" />
+});
+
+const PaymentDialog = dynamic(() => import('@/app/(app)/admin/accounting/components/payment-dialog'), {
+    loading: () => <PlaceholderContent text="Ödeme Ekranı" />
+});
+
+const TransferDrawer = dynamic(() => import('@/app/(app)/admin/accounting/components/transfer-drawer'), {
+    loading: () => <PlaceholderContent text="Transfer Ekranı" />
+});
+
 // Lazy load drawer contents to keep initial bundle small
 const PlaceholderContent = ({ text }: { text: string }) => (
     <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-4">
@@ -46,6 +58,7 @@ function DrawerContent() {
         params.delete('id');
         params.delete('type');
         router.push(pathname + '?' + params.toString(), { scroll: false });
+        router.refresh();
     };
 
     // Configuration for different drawer types
@@ -54,10 +67,14 @@ function DrawerContent() {
         'edit-employee': { title: 'Personel Düzenle', subtitle: 'Çalışan bilgilerini ve yetkilerini güncelleyin.', size: 'xl' },
         'add-customer': { title: 'Yeni Müşteri Kaydı', subtitle: 'Sisteme yeni bir müşteri ekleyin.', size: 'xl' },
         'add-supplier': { title: 'Yeni Tedarikçi Kaydı', subtitle: 'Sisteme yeni bir tedarikçi ekleyin.', size: 'xl' },
+        'add-subcontractor': { title: 'Yeni Taşeron Kaydı', subtitle: 'Sisteme yeni bir taşeron ekleyin.', size: 'xl' },
+        'global-order': { title: 'Hızlı Satış', subtitle: 'Hemen bir satış siparişi oluşturun.', size: '2xl' },
         'edit-contact': { title: 'Cari Bilgilerini Düzenle', subtitle: 'İletişim ve finansal tanımlamaları güncelleyin.', size: 'xl' },
         'contact-detail': { title: 'Cari Kartı', subtitle: 'Cari hesap bilgileri ve işlem geçmişi.', size: '2xl' },
         'contact-statement': { title: 'Cari Ekstre', subtitle: 'Tüm borç/alacak ve işlem geçmişi.', size: '2xl' },
         'commerce-form': { title: 'İşlem Formu', subtitle: 'Satış, Alım veya İade kaydı oluşturun.', size: '2xl' },
+        'transaction': { title: 'Yeni Finansal İşlem', subtitle: 'Tahsilat veya Tediye girişi yapın.', size: 'md' },
+        'transfer': { title: 'Varlık Transferi & Virman', subtitle: 'Hesaplar arası transfer veya çek ödemesi yapın.', size: 'md' },
     };
 
     const config = drawerType ? drawerConfig[drawerType] : null;
@@ -82,6 +99,20 @@ function DrawerContent() {
                 {drawerType === 'add-supplier' && (
                     <ContactDrawer mode="add" type="supplier" />
                 )}
+                {drawerType === 'add-subcontractor' && (
+                    <ContactDrawer mode="add" type="subcontractor" />
+                )}
+                {drawerType === 'transaction' && (
+                    <PaymentDialog
+                        onClose={closeDrawer}
+                        onSuccess={closeDrawer}
+                        type={searchParams.get('txType') === 'payment' ? 'payment' : 'collection'}
+                        contactId={id || undefined}
+                    />
+                )}
+                {drawerType === 'global-order' && (
+                    <GlobalOrderDrawer type="sale" onClose={() => closeDrawer()} />
+                )}
                 {drawerType === 'edit-contact' && (
                     <ContactDrawer id={id} mode="edit" />
                 )}
@@ -90,6 +121,12 @@ function DrawerContent() {
                 )}
                 {drawerType === 'contact-statement' && <PlaceholderContent text={`Cari (${id}) Ekstre`} />}
                 {drawerType === 'commerce-form' && <PlaceholderContent text="Ticari İşlem Formu" />}
+                {drawerType === 'transfer' && (
+                    <TransferDrawer
+                        onClose={closeDrawer}
+                        initialType={(searchParams.get('type') as any) || 'transfer'}
+                    />
+                )}
             </div>
         </Drawer>
     );

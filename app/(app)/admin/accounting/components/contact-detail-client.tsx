@@ -7,6 +7,7 @@ import PaymentDialog from './payment-dialog';
 import OrderDialog from '../../orders/components/order-dialog';
 import OrderStatusBadge from '../../orders/components/order-status-badge';
 import { useRouter, usePathname } from 'next/navigation';
+import ContactEditor from './contact-editor';
 
 interface Props {
     contact: any;
@@ -19,14 +20,20 @@ interface Props {
     transactions: any[];
     type: 'customer' | 'supplier';
     isDrawer?: boolean;
+    initialTab?: 'orders' | 'transactions' | 'summary' | 'edit';
+    onRefresh?: () => void;
 }
 
-export default function ContactDetailClient({ contact, account, totals, orders, transactions, type, isDrawer = false }: Props) {
+export default function ContactDetailClient({ contact, account, totals, orders, transactions, type, isDrawer = false, initialTab = 'orders', onRefresh }: Props) {
     const router = useRouter();
     const pathname = usePathname();
-    const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'transactions'>('summary');
+    const [activeTab, setActiveTab] = useState<'orders' | 'transactions' | 'summary' | 'edit'>(initialTab);
     const [showTradeDialog, setShowTradeDialog] = useState(false);
+    const [tradeType, setTradeType] = useState<'sale' | 'purchase'>('sale');
+
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [paymentType, setPaymentType] = useState<'collection' | 'payment'>('collection');
+
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
     const displayName = contact.company_name || `${contact.first_name} ${contact.last_name}`;
@@ -34,79 +41,93 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
 
     return (
         <div className="space-y-8">
+            {/* ... (rest of the component structure remains same until dialog rendering) ... */}
+            {/* I will use multi_replace for the rest to be safer, replacing just the interface and header first here is fine if I match correct lines */}
+            {/* But since I need to replace multiple blocks, let's just do the interface first here and then use another call for the handlers or do it all if safe. Use replace_file_content carefully. */}
+            {/* Actually, I can target the whole file content areas if I am careful. Let's do interface first. */}
+
             {/* Header Section */}
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    {!isDrawer && (
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${type === 'customer' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'
-                                    }`}>
-                                    {type === 'customer' ? 'MÜŞTERİ' : 'TEDARİKÇİ'}
-                                </span>
-                                <span className="text-gray-300">/</span>
-                                <span className="text-gray-400 font-mono text-xs">{account?.code || 'HESAP TANIMSIZ'}</span>
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all">
+                <div className="flex flex-col gap-6">
+                    <div className="flex justify-between items-start">
+                        {!isDrawer ? (
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${type === 'customer' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {type === 'customer' ? 'MÜŞTERİ' : 'TEDARİKÇİ'}
+                                    </span>
+                                    <span className="text-gray-300">/</span>
+                                    <span className="text-gray-400 font-mono text-xs">{account?.code || 'HESAP TANIMSIZ'}</span>
+                                </div>
+                                <h1 className="text-3xl font-black text-gray-900 tracking-tight">{displayName}</h1>
                             </div>
-                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{displayName}</h1>
-                        </div>
-                    )}
-
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-
-                        <div className="flex items-center gap-8 bg-gray-50/50 p-6 rounded-2xl border border-gray-50">
-                            <div className="text-right">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Cari Bakiye</div>
-                                <div className={`text-2xl font-black ${balance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                    {balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner ${type === 'customer' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'
+                                    }`}>
+                                    {displayName.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-black text-gray-900 leading-tight">{displayName}</h1>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{account?.code || 'HESAP TANIMSIZ'}</div>
                                 </div>
                             </div>
+                        )}
+
+                        <div className="bg-gray-50/50 px-5 py-3 rounded-2xl border border-gray-50 text-right">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Cari Bakiye</div>
+                            <div className={`text-xl font-black ${balance < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL
+                            </div>
                         </div>
+                    </div>
 
-                        <div className="flex items-center gap-3">
-                            <Link
-                                href={`${pathname}?drawer=edit-contact&id=${contact.id}`}
-                                className="p-4 rounded-2xl bg-gray-50 text-gray-400 hover:text-gray-900 transition-all border border-gray-100"
-                                title="Bilgileri Düzenle"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                            </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            onClick={() => setActiveTab('edit')}
+                            className={`p-3 rounded-xl transition-all border ${activeTab === 'edit' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-gray-100 text-gray-500 hover:text-gray-900 border-transparent'
+                                }`}
+                            title="Bilgileri Düzenle"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </button>
 
-                            <button
-                                onClick={() => setShowPaymentDialog(true)}
-                                className={`px-8 py-4 rounded-2xl font-black transition-all hover:-translate-y-1 bg-white border shadow-sm ${type === 'customer'
-                                    ? 'text-indigo-600 border-indigo-100 hover:bg-indigo-50'
-                                    : 'text-emerald-600 border-emerald-100 hover:bg-emerald-50'
-                                    }`}
-                            >
-                                {type === 'customer' ? '💵 Ödeme Al (Tahsilat)' : '💸 Ödeme Yap (Tediye)'}
-                            </button>
+                        <div className="h-8 w-px bg-gray-100 mx-1" />
 
-                            <button
-                                onClick={() => setShowTradeDialog(true)}
-                                className={`px-8 py-4 rounded-2xl font-black text-white shadow-xl transition-all hover:-translate-y-1 ${type === 'customer'
-                                    ? 'bg-indigo-600 shadow-indigo-100 hover:bg-indigo-700'
-                                    : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700'
-                                    }`}
-                            >
-                                {type === 'customer' ? '🎯 Yeni Satış Yap' : '📦 Yeni Alım Yap'}
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => { setPaymentType('collection'); setShowPaymentDialog(true); }}
+                            className="px-4 py-2.5 rounded-xl font-bold bg-white border border-indigo-100 text-indigo-600 hover:bg-indigo-50 shadow-sm text-xs transition-all flex items-center gap-2"
+                        >
+                            Tahsilat
+                        </button>
 
+                        <button
+                            onClick={() => { setPaymentType('payment'); setShowPaymentDialog(true); }}
+                            className="px-4 py-2.5 rounded-xl font-bold bg-white border border-rose-100 text-rose-600 hover:bg-rose-50 shadow-sm text-xs transition-all flex items-center gap-2"
+                        >
+                            Tediye
+                        </button>
 
+                        <button
+                            onClick={() => { setTradeType('sale'); setShowTradeDialog(true); }}
+                            className="px-4 py-2.5 rounded-xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 active:translate-y-0 transition-all text-xs"
+                        >
+                            Sipariş/Satış
+                        </button>
+
+                        <button
+                            onClick={() => { setTradeType('purchase'); setShowTradeDialog(true); }}
+                            className="px-4 py-2.5 rounded-xl font-bold bg-emerald-600 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:-translate-y-0.5 active:translate-y-0 transition-all text-xs"
+                        >
+                            Alım Yap
+                        </button>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="flex gap-2 p-1 bg-gray-100/50 rounded-2xl w-fit">
-                    <button
-                        onClick={() => setActiveTab('summary')}
-                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'summary' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        Genel Bakış
-                    </button>
                     <button
                         onClick={() => setActiveTab('orders')}
                         className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'orders' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
@@ -120,6 +141,20 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
                             }`}
                     >
                         Hesap Ekstresi ({transactions.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('summary')}
+                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'summary' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Genel Bakış [Bilgiler]
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('edit')}
+                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'edit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Düzenle
                     </button>
                 </div>
 
@@ -246,15 +281,29 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
                             </table>
                         </div>
                     )}
+                    {activeTab === 'edit' && (
+                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                            <h3 className="text-lg font-bold text-gray-900 mb-6">Kart Bilgilerini Güncelle</h3>
+                            <ContactEditor
+                                initialData={contact}
+                                type={type as any}
+                                onSuccess={() => {
+                                    setActiveTab('summary');
+                                    onRefresh?.();
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {showTradeDialog && (
                     <TradeDialog
                         contact={contact}
-                        type={type === 'customer' ? 'sale' : 'purchase'}
+                        type={tradeType}
                         onClose={() => setShowTradeDialog(false)}
                         onSuccess={() => {
                             router.refresh();
+                            onRefresh?.();
                         }}
                     />
                 )}
@@ -263,10 +312,11 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
                     <PaymentDialog
                         contact={contact}
                         account={account}
-                        type={type}
+                        type={paymentType}
                         onClose={() => setShowPaymentDialog(false)}
                         onSuccess={() => {
                             router.refresh();
+                            onRefresh?.();
                         }}
                     />
                 )}
@@ -277,6 +327,7 @@ export default function ContactDetailClient({ contact, account, totals, orders, 
                         onClose={() => setSelectedOrderId(null)}
                         onSuccess={() => {
                             router.refresh();
+                            onRefresh?.();
                         }}
                     />
                 )}

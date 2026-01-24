@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { saveContact } from '@/app/actions/accounting';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -15,6 +15,10 @@ export default function SupplierClient({ initialSuppliers }: Props) {
     const searchParams = useSearchParams();
     const [suppliers, setSuppliers] = useState(initialSuppliers);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setSuppliers(initialSuppliers);
+    }, [initialSuppliers]);
 
     const [hasMore, setHasMore] = useState(initialSuppliers.length === 50);
     const [page, setPage] = useState(1);

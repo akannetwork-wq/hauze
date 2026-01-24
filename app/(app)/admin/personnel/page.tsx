@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import PersonnelDashboardContent from './personnel-dashboard-content';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PersonnelDashboard() {
     return (
         <div className="p-8 font-sans max-w-[1600px] mx-auto">

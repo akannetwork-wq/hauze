@@ -1,5 +1,6 @@
 import React from 'react';
 import SubNav from '@/components/admin/sub-nav';
+import ModuleGuard from '@/components/admin/rbac-guard';
 
 export default function InventoryLayout({
     children,
@@ -7,7 +8,7 @@ export default function InventoryLayout({
     children: React.ReactNode;
 }) {
     const navItems = [
-        { href: '/admin/inventory', label: 'Özet', icon: '📊' },
+        { href: '/admin/inventory', label: 'Özet', icon: '📊', exact: true },
         { href: '/admin/inventory/products', label: 'Ürün Kartları', icon: '📦' },
         { href: '/admin/inventory/categories', label: 'Kategoriler', icon: '📁' },
         { href: '/admin/inventory/consumables', label: 'Sarf Malzeme', icon: '🧪' },
@@ -15,11 +16,13 @@ export default function InventoryLayout({
     ];
 
     return (
-        <div className="flex flex-1 overflow-hidden">
-            <SubNav title="Envanter" items={navItems} />
-            <div className="flex-1 overflow-y-auto bg-white">
-                {children}
+        <ModuleGuard moduleKey="inventory">
+            <div className="flex flex-1 overflow-hidden">
+                <SubNav title="Envanter" items={navItems} />
+                <div className="flex-1 overflow-y-auto bg-white">
+                    {children}
+                </div>
             </div>
-        </div>
+        </ModuleGuard>
     );
 }

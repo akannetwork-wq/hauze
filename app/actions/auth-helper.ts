@@ -21,10 +21,29 @@ export const getAuthenticatedClient = cache(async () => {
         throw new Error('No tenant context');
     }
 
+    // Fetch user role and permissions for this tenant
+    const { data: tenantUser } = await supabase
+        .from('tenant_users')
+        .select('role, permissions')
+        .eq('tenant_id', context.tenant.id)
+        .eq('user_id', user.id)
+        .single();
+
+    // Check if user is linked to an employee record
+    const { data: employee } = await supabase
+        .from('employees')
+        .select('id, first_name, last_name, position')
+        .eq('user_id', user.id)
+        .eq('tenant_id', context.tenant.id)
+        .single();
+
     return {
         supabase,
         user,
         tenant: context.tenant,
-        modules: context.modules
+        modules: context.modules,
+        role: tenantUser?.role || 'user',
+        permissions: tenantUser?.permissions || {},
+        employee: employee || null
     };
 });

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 interface Props {
     initialData?: any;
-    type: 'customer' | 'supplier';
+    type: 'customer' | 'supplier' | 'subcontractor';
     onSuccess?: () => void;
 }
 

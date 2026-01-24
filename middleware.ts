@@ -34,8 +34,11 @@ export default async function middleware(req: NextRequest) {
     // Terminal Logic (Super Admin)
     const isTerminal = hostname.startsWith('terminal') || url.pathname.startsWith('/terminal');
 
-    // App Logic (Tenant Admin)
-    const isApp = hostname.startsWith('app') || url.pathname.startsWith('/admin') || url.pathname.startsWith('/login');
+    // App Logic (Tenant Admin & Personnel Portal)
+    const isApp = hostname.startsWith('app') ||
+        url.pathname.startsWith('/admin') ||
+        url.pathname.startsWith('/login') ||
+        url.pathname.startsWith('/me');
 
     // ---------------------------------------------------------
     // Root Domain Logic (Main Site)

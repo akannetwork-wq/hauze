@@ -8,6 +8,7 @@ interface SubNavItem {
     href: string;
     label: string;
     icon?: string;
+    exact?: boolean;
 }
 
 interface SubNavProps {
@@ -18,9 +19,10 @@ interface SubNavProps {
 export default function SubNav({ title, items }: SubNavProps) {
     const pathname = usePathname();
 
-    const isActive = (href: string) => {
-        if (href === '/admin') return pathname === '/admin';
-        return pathname === href || (pathname.startsWith(href) && href !== '/admin');
+    const isActive = (item: SubNavItem) => {
+        if (item.exact) return pathname === item.href;
+        if (item.href === '/admin') return pathname === '/admin';
+        return pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin');
     };
 
     return (
@@ -36,9 +38,9 @@ export default function SubNav({ title, items }: SubNavProps) {
                     <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${isActive(item.href)
-                                ? 'bg-indigo-50 text-indigo-600 font-bold'
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'
+                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${isActive(item)
+                            ? 'bg-indigo-50 text-indigo-600 font-bold'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'
                             }`}
                     >
                         {item.icon && <span>{item.icon}</span>}
