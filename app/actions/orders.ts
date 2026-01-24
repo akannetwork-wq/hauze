@@ -317,20 +317,10 @@ export async function registerOrderPayment(
         const { error: txError } = await supabase.from('transactions').insert(transactions);
         if (txError) throw txError;
 
-        // --- SYNC POINT: Order Payment to HR Ledger ---
-        if (order.employee_id && isSale) {
-            await supabase
-                .from('personnel_transactions')
-                .insert({
-                    tenant_id: tenant.id,
-                    employee_id: order.employee_id,
-                    date: new Date().toISOString().split('T')[0],
-                    type: 'payment',
-                    amount: amount,
-                    description: `${paymentLabels[method] || 'Ödeme'} - Sipariş #${order.order_number || order.id.slice(0, 8)}`
-                });
-        }
-        // ----------------------------------------------
+        // NOTE: We intentionally do NOT insert into personnel_transactions for payments.
+        // The payment is already tracked via transactions (credit to employee account).
+        // Inserting to personnel_transactions would cause double-credit since
+        // get_net_balance() sums BOTH sources.
 
         // 6. Recalculate and Update Order Status
         const { data: allTxs } = await supabase
@@ -649,29 +639,10 @@ export async function createServiceOrder(data: {
             }
         }
 
-        // --- SYNC POINT: HR Ledger (Personnel) ---
-        if (data.employee_id) {
-            await supabase.from('personnel_transactions').insert({
-                tenant_id: tenant.id,
-                employee_id: data.employee_id,
-                date: new Date().toISOString().split('T')[0],
-                type: 'advance', // Service usage is a debt (advance on earnings)
-                amount: data.total,
-                description: `Hizmet Siparişi - #${order.id.slice(0, 8)}`
-            });
-
-            if (data.paymentMethod) {
-                // If they paid immediately, record it as a payment to wipe the debt
-                await supabase.from('personnel_transactions').insert({
-                    tenant_id: tenant.id,
-                    employee_id: data.employee_id,
-                    date: new Date().toISOString().split('T')[0],
-                    type: 'payment',
-                    amount: data.total,
-                    description: `Hizmet Tahsilatı - #${order.id.slice(0, 8)}`
-                });
-            }
-        }
+        // NOTE: We intentionally do NOT insert into personnel_transactions here.
+        // The debt is already tracked via the accounts/transactions financial ledger.
+        // Inserting to personnel_transactions would cause double-charging since
+        // get_net_balance() sums BOTH hr_sum (personnel_transactions) AND fin_sum (transactions).
 
         revalidatePath('/admin/orders');
         return { success: true, data: order };
