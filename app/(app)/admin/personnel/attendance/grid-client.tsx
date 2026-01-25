@@ -76,26 +76,15 @@ export default function AttendanceGridClient({ employees, initialAttendance, mon
                 date: dateStr,
                 status: nextStatus,
                 hours: hours,
-                rate_multiplier: rateMultiplier
+                rate_multiplier: rateMultiplier,
+                // Pass previous status to handle earning updates properly
+                previous_status: currentStatus
             });
 
-            if (result.success && employees.find(e => e.id === employeeId).worker_type === 'daily') {
-                const emp = employees.find(e => e.id === employeeId);
-                let amount = 0;
-
-                if (nextStatus === 'present') amount = emp.daily_rate;
-                else if (nextStatus === 'half-day') amount = emp.daily_rate / 2;
-                else if (nextStatus === 'double') amount = emp.daily_rate * 2;
-
-                if (amount > 0) {
-                    await addPersonnelTransaction({
-                        employee_id: employeeId,
-                        amount: amount,
-                        type: 'earning',
-                        date: dateStr,
-                        description: `${dateStr} Puantaj Hakedişi`
-                    });
-                }
+            // Only process daily worker earnings if saving was successful
+            if (result.success && employees.find(e => e.id === employeeId)?.worker_type === 'daily') {
+                // Earning is now handled inside saveAttendance action to avoid duplicates
+                // No need to call addPersonnelTransaction here
             } else if (!result.success) {
                 alert('Puantaj kaydedilemedi: ' + result.error);
             }

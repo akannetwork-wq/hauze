@@ -1,26 +1,137 @@
 @import "tailwindcss";
 
+/* ========================================
+   NETSPACE Design System
+   Colors: Dark #27292a, Accent #0000ff
+   Theme: Light (default) / Dark
+   ======================================== */
+
+/* Light Theme (Default) */
 :root {
+    /* Base Colors */
     --background: #ffffff;
     --foreground: #171717;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+
+    /* Brand Colors */
+    --primary: #0000ff;
+    --primary-foreground: #ffffff;
+    --primary-hover: #0000cc;
+
+    /* Sidebar (Always Dark) */
+    --sidebar-bg: #ffffff;
+    --sidebar-foreground: #171717;
+    --sidebar-muted: #3f4142;
+    --sidebar-accent: #0000ff;
+
+    /* Semantic Colors */
+    --success: #22c55e;
+    --success-foreground: #ffffff;
+    --warning: #f59e0b;
+    --warning-foreground: #ffffff;
+    --danger: #ef4444;
+    --danger-foreground: #ffffff;
+    --info: #3b82f6;
+    --info-foreground: #ffffff;
+
+    /* Component Tokens */
+    --card: #ffffff;
+    --card-foreground: #ffffff;
+    --popover: #ffffff;
+    --popover-foreground: #000000;
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-sm: 0.25rem;
 }
 
+/* Dark Theme */
+.dark {
+    --background: #e3e3e3;
+    --foreground: #000000;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --border: #27272a;
+    --input: #27272a;
+
+    --card: #ffffff;
+    --card-foreground: #000000;
+    --popover: #ffffff;
+    --popover-foreground: #000000;
+
+    /* Primary stays same */
+    --primary: #3b3bff;
+    --primary-hover: #5555ff;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+        --background: #ffffff;
+        --foreground: #000000;
+        --muted: #ffffff;
+        --muted-foreground: #000000;
+        --border: #ffffff;
+        --input: #ffffff;
+        --card: #ffffff;
+        --card-foreground: #000000;
+        --popover: #ffffff;
+        --popover-foreground: #000000;
+        --primary: #3b3bff;
+        --primary-hover: #5555ff;
+    }
+}
+
+/* Tailwind Theme Integration */
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-sidebar: var(--sidebar-bg);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-muted: var(--sidebar-muted);
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-danger: var(--danger);
+    --color-info: var(--info);
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
+/* Base Styles */
+body {
+    background: white;
+    color: black;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-body {
-    background: var(--background);
-    color: var(--foreground);
-    font-family: Arial, Helvetica, sans-serif;
+/* Custom Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Focus Styles */
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
 }

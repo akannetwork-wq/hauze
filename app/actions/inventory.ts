@@ -96,13 +96,16 @@ export async function deleteCategory(id: string) {
 export async function updateCategoryOrder(items: { id: string; sort_order: number }[]) {
     const { supabase, tenant } = await getAuthenticatedClient();
 
-    for (const item of items) {
-        await supabase
-            .from('product_categories')
-            .update({ sort_order: item.sort_order })
-            .eq('id', item.id)
-            .eq('tenant_id', tenant.id);
-    }
+    // Execute all updates in parallel for better performance
+    await Promise.all(
+        items.map(item =>
+            supabase
+                .from('product_categories')
+                .update({ sort_order: item.sort_order })
+                .eq('id', item.id)
+                .eq('tenant_id', tenant.id)
+        )
+    );
 
     revalidatePath('/admin/inventory/categories');
     return { success: true };
@@ -281,30 +284,30 @@ export async function saveProduct(product: Partial<Product>) {
         dbProduct.sku = parts.join('-');
     }
 
-    // 2. Slug Collision Resolution
+    // 2. Slug Collision Resolution - Optimized with single query
     let baseSlug = dbProduct.slug || generateSlug(dbProduct.title || 'item');
     if (!baseSlug || baseSlug === 'item') baseSlug = `item-${Math.floor(Math.random() * 1000)}`;
 
-    // Check if slug exists for this tenant (excluding own ID if updating)
-    let isUnique = false;
-    let counter = 0;
+    // Fetch all existing slugs that start with baseSlug in one query
+    let slugQuery = supabase
+        .from('products')
+        .select('slug')
+        .eq('tenant_id', tenant.id)
+        .or(`slug.eq.${baseSlug},slug.like.${baseSlug}-%`);
+
+    if (dbProduct.id) slugQuery = slugQuery.neq('id', dbProduct.id);
+
+    const { data: existingSlugs } = await slugQuery;
+
     let finalSlug = baseSlug;
-
-    while (!isUnique) {
-        let query = supabase
-            .from('products')
-            .select('id')
-            .eq('tenant_id', tenant.id)
-            .eq('slug', finalSlug);
-
-        if (dbProduct.id) query = query.neq('id', dbProduct.id);
-
-        const { data: existing } = await query.maybeSingle();
-
-        if (!existing) {
-            isUnique = true;
-        } else {
-            counter++;
+    if (existingSlugs && existingSlugs.length > 0) {
+        const slugSet = new Set(existingSlugs.map(s => s.slug));
+        if (slugSet.has(baseSlug)) {
+            // Find next available number
+            let counter = 1;
+            while (slugSet.has(`${baseSlug}-${counter}`)) {
+                counter++;
+            }
             finalSlug = `${baseSlug}-${counter}`;
         }
     }

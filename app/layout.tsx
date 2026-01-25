@@ -19,19 +19,23 @@ export const metadata: Metadata = {
 
 import React, { Suspense } from "react";
 
+import { ThemeProvider } from "@/components/theme-provider";
+
 export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
-                <Suspense fallback={null}>
-                    {children}
-                </Suspense>
+                <ThemeProvider>
+                    <Suspense fallback={null}>
+                        {children}
+                    </Suspense>
+                </ThemeProvider>
             </body>
         </html>
     );

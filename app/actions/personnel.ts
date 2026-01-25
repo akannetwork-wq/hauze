@@ -113,7 +113,7 @@ export async function saveAttendance(attendance: any) {
         const { supabase, tenant } = await getAuthenticatedClient();
 
         // Strip virtual/joined fields
-        const { employees, ...dbAttendance } = attendance;
+        const { employees, previous_status, ...dbAttendance } = attendance;
 
         const { data, error } = await supabase
             .from('personnel_attendance')
@@ -128,6 +128,44 @@ export async function saveAttendance(attendance: any) {
             .single();
 
         if (error) throw error;
+
+        // Handle daily worker earnings - delete old and create new to prevent duplicates
+        const { data: employee } = await supabase
+            .from('employees')
+            .select('worker_type, daily_rate')
+            .eq('id', attendance.employee_id)
+            .single();
+
+        if (employee?.worker_type === 'daily') {
+            // First, delete any existing earning for this date
+            await supabase
+                .from('personnel_transactions')
+                .delete()
+                .eq('employee_id', attendance.employee_id)
+                .eq('date', attendance.date)
+                .eq('type', 'earning')
+                .like('description', `%${attendance.date}%`);
+
+            // Calculate new earning amount based on status
+            let amount = 0;
+            const status = attendance.status;
+
+            if (status === 'present') amount = employee.daily_rate || 0;
+            else if (status === 'half-day') amount = (employee.daily_rate || 0) / 2;
+            else if (status === 'double') amount = (employee.daily_rate || 0) * 2;
+
+            // Insert new earning if amount > 0
+            if (amount > 0) {
+                await supabase.from('personnel_transactions').insert({
+                    tenant_id: tenant.id,
+                    employee_id: attendance.employee_id,
+                    date: attendance.date,
+                    type: 'earning',
+                    amount: amount,
+                    description: `${attendance.date} Puantaj Hakedişi`
+                });
+            }
+        }
 
         revalidatePath('/admin/personnel/attendance');
         return { success: true, data };
@@ -208,20 +246,18 @@ export async function getPersonnelLedger(employeeId: string) {
             source: 'hr',
         }));
 
+        // Financial transactions - include orders and payments for service orders
+        // Since we no longer sync service orders to personnel_transactions,
+        // we need to show them from the financial ledger
         const safeFinTx = finTx
-            .filter(t => {
-                // Filter out synced items: Orders, Invoices, Purchases, and Payments
-                // We assume these are synced to HR based on current logic.
-                const isSyncedType = ['order', 'invoice', 'purchase', 'payment'].includes(t.document_type);
-                return !isSyncedType;
-            })
             .map(t => ({
                 id: t.id,
                 date: t.date,
                 amount: t.amount,
                 description: t.description,
                 created_at: t.created_at,
-                type: t.type === 'debit' ? 'advance' : 'payment', // Mapping for UI compatibility
+                // Map accounting types to HR types for UI compatibility
+                type: t.type === 'debit' ? 'advance' : 'payment',
                 original_type: t.type,
                 source: 'financial',
                 document_type: t.document_type,

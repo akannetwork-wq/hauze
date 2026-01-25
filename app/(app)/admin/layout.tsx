@@ -37,7 +37,7 @@ export default async function AdminDashboardLayout({
     }
 
     return (
-        <div className="min-h-screen flex bg-gray-50 w-full">
+        <div className="min-h-screen flex bg-muted w-full">
             {/* Global Drawer Manager (URL Based) */}
             <DrawerManager />
 

@@ -204,7 +204,7 @@ export default function ServiceOrderForm({ services }: Props) {
             });
 
             if (result.success) {
-                router.push(`/admin/orders/${result.data.id}`);
+                router.push('/admin/orders');
                 router.refresh();
             } else {
                 alert(result.error);
